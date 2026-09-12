@@ -23,6 +23,18 @@ import { palette } from "./palette";
  * that you can see the extrusion. 52 degrees shows building sides clearly
  * while keeping enough of the street grid visible to read the neighborhood.
  */
+/**
+ * Cap on MapLibre's `pixelRatio`.
+ *
+ * WebGL renders at the device pixel ratio, so a 3840x2400 external display is
+ * ~9M pixels per frame (doc 03 §4.3). If pitched views stutter on demo day,
+ * set NEXT_PUBLIC_MAX_PIXEL_RATIO=1.5 -- it is the cheapest thing to turn down
+ * and costs little at presentation distance.
+ */
+export const MAX_PIXEL_RATIO = Number(
+  process.env.NEXT_PUBLIC_MAX_PIXEL_RATIO ?? 2,
+);
+
 export const CAMERA = {
   pitch: 52,
   /** A slight rotation off north; a grid this regular looks flat square-on. */

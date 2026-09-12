@@ -87,9 +87,9 @@ web/public/data/     generated artifacts the browser fetches (committed)
 
 ---
 
-### M5 — Demo-day resilience
+### M5 — Demo-day resilience ✅ done 2026-09-12
 
-May follow M4, but must not be forgotten.
+May follow M4, but must not be forgotten. *Results: §8.*
 
 - Export the bbox basemap as **PMTiles** into `public/`, switched by an env flag (e.g. `NEXT_PUBLIC_OFFLINE_TILES`). Layers ② and ③ are already local, so flipping the flag makes the demo fully offline (doc 03 §2.3.2).
 - If pitched views with heavy overlays stutter on a high-DPI external display, cap MapLibre's `pixelRatio` at ~1.5 (doc 03 §4.3).
@@ -99,7 +99,7 @@ May follow M4, but must not be forgotten.
 
 ## 2. Designing for the district-scale expansion
 
-Per doc 03 §4.2, the pressure point at CD 8/9/10 scale is data loading, not the GPU. Keep layer ②'s source behind a thin abstraction in `lib/map.ts` so swapping `geojson` for PMTiles is a local change. The tippecanoe → PMTiles pipeline is the only step that needs POSIX tooling; see §8.
+Per doc 03 §4.2, the pressure point at CD 8/9/10 scale is data loading, not the GPU. Keep layer ②'s source behind a thin abstraction in `lib/map.ts` so swapping `geojson` for PMTiles is a local change. The tippecanoe → PMTiles pipeline is the only step that needs POSIX tooling; see §9.
 
 ---
 
@@ -147,7 +147,7 @@ This box is **50% larger than the 1.5–2 km² doc 03 §3.1 originally specified
 
 *(measured across the full 3.5 × 3.5 km survey area; 95.7% within the chosen box)*
 
-Values are fine-grained decimals — 4.0, 4.2, 3.8, 3.9 m and so on — characteristic of the LA County LARIAC LiDAR import rather than hand-entered estimates. **The §9 risk of a uniform 5 m slab field is retired: OSM is a sufficient building source and no switch to a separate LARIAC dataset is needed.** The fallback chain stays in the M1 script as a safety net, but its `building:levels` step will almost never fire.
+Values are fine-grained decimals — 4.0, 4.2, 3.8, 3.9 m and so on — characteristic of the LA County LARIAC LiDAR import rather than hand-entered estimates. **The §10 risk of a uniform 5 m slab field is retired: OSM is a sufficient building source and no switch to a separate LARIAC dataset is needed.** The fallback chain stays in the M1 script as a safety net, but its `building:levels` step will almost never fire.
 
 Height distribution:
 
@@ -430,7 +430,7 @@ Same camera, one variable:
 
 That difference is the proof: deck.gl is depth-testing against MapLibre's extrusions rather than drawing over them.
 
-**The §9 risk is retired — deck.gl 9.4.0 and MapLibre 5.24.0 interleave correctly.** The fallback of `interleaved: false` is not needed.
+**The §10 risk is retired — deck.gl 9.4.0 and MapLibre 5.24.0 interleave correctly.** The fallback of `interleaved: false` is not needed.
 
 ### 7.3 The probe stays
 
@@ -454,7 +454,99 @@ Decision: **stay on 5.24 for the hackathon**, on the evidence that there is no p
 
 ---
 
-## 8. Cross-platform conventions
+## 8. M5 results
+
+**Completed 2026-09-12.** The demo runs with no network at all.
+
+### 8.1 A tile tree, not a PMTiles archive
+
+Doc 03 §2.3.2 called for PMTiles. We built a plain tile tree instead.
+
+PMTiles packs many tiles into one archive addressed by HTTP range requests, which is what makes a *large* area practical. The demo area needs **42 tiles**. At that size the archive format buys nothing and costs a toolchain — tippecanoe or planetiler, neither of which installs the same way on macOS and Windows, and one of which would have meant WSL on the Windows machine. Plain files under `public/` are simpler, more portable, and need no account anywhere.
+
+The zoom range is 11–14 because `lib/map.ts` sets `minZoom: 11` and the upstream source's maxzoom is 14. Including zooms 0–10 would have tripled the package (125 tiles, ~17 MB) for tiles the map can never request.
+
+`scripts/build_offline_tiles.py` downloads them with `requests` alone, consistent with §9's no-geospatial-toolchain rule.
+
+| Item | Value |
+| --- | --- |
+| Tiles | 42 (zoom 11–14, one tile of margin around the bbox) |
+| Glyphs | 4 files — Noto Sans Regular and Bold, ranges 0–255 and 256–511 |
+| Total on disk | 6.2 MB, committed |
+| Upstream snapshot | `20260906_080001_pt`, recorded in `manifest.json` |
+
+### 8.2 Verified with the network blocked
+
+`window.fetch` was patched to reject every request to `openfreemap.org`, then the style was loaded.
+
+| Check | Result |
+| --- | --- |
+| Requests to the network basemap | **0 — nothing was even attempted** |
+| Roads rendered | 638 |
+| Context buildings | 173 |
+| Slice buildings | 4,911 |
+| Place labels | 5 |
+
+Rendering is indistinguishable from online. Context is slightly thinner far from the venue (173 against 226 online) because the package stops one tile beyond the bbox — the demo never leaves that area.
+
+**One bug this caught:** MapLibre fetches tiles from a web worker, where a root-relative URL has no document to resolve against, and it fails with `Failed to parse URL from /offline/tiles/12/701/1636.pbf`. The slice still drew, so the map looked half-working rather than broken. Offline URLs are now absolute, built from `window.location.origin`.
+
+### 8.3 Flags
+
+All three live in `web/.env.example`; copy it to `.env.local` to use. `NEXT_PUBLIC_*` values are inlined at build time, so the dev server must be restarted after a change.
+
+| Flag | Default | Effect |
+| --- | --- | --- |
+| `NEXT_PUBLIC_OFFLINE_TILES` | `off` | `on` serves the basemap from `public/offline` — verified end to end |
+| `NEXT_PUBLIC_OCCLUSION_PROBE` | `on` | `off` hides the M4 probe — verified |
+| `NEXT_PUBLIC_MAX_PIXEL_RATIO` | `2` | Caps MapLibre's `pixelRatio`; drop to `1.5` if a high-DPI display stutters |
+
+The pixel-ratio clamp could not be exercised here: this display reports `devicePixelRatio: 1`, so `Math.min(1, 1.5)` is 1 either way. The env-var plumbing itself is proven by the other two flags.
+
+The repository default is **online**, because the network basemap gives more context around the demo area. Switch to offline deliberately, as part of the run-through below.
+
+### 8.4 Demo-day runbook
+
+Do this once on the machine that will present, **before** relying on venue Wi-Fi.
+
+```bash
+# 1. From a clean clone, everything generated is already committed.
+cd web
+npm install
+
+# 2. Turn on offline tiles.
+cp .env.example .env.local          # PowerShell: Copy-Item .env.example .env.local
+# then edit .env.local: NEXT_PUBLIC_OFFLINE_TILES=on
+
+# 3. Run it.
+npm run dev
+```
+
+Then, in order:
+
+1. Open `http://localhost:3000` and confirm roads, buildings and labels all appear.
+2. **Turn the laptop's Wi-Fi off and reload.** The map must look identical. This is the only test that matters; everything else is preparation for it.
+3. Click a building — the side panel must open. That path never touched the network anyway.
+4. Plug in power and **disable Low Power Mode**; it throttles the GPU.
+5. Confirm browser hardware acceleration is on.
+6. If pitched views stutter on the projector, set `NEXT_PUBLIC_MAX_PIXEL_RATIO=1.5` and restart.
+
+Do **not** run `npm run build` while the dev server is running — see §5.6.
+
+### 8.5 Refreshing the package
+
+The tiles are a snapshot. Re-run after changing the demo area, or to pick up newer OpenStreetMap data:
+
+```bash
+python scripts/build_offline_tiles.py           # fills in anything missing
+python scripts/build_offline_tiles.py --force   # re-downloads everything
+```
+
+If the bounding box in `scripts/demo_area.py` changes, delete `web/public/offline/` first — the script adds tiles but never removes ones that are no longer needed.
+
+---
+
+## 9. Cross-platform conventions
 
 The team mixes macOS and Windows, so the build must work on both without per-machine instructions.
 
@@ -466,7 +558,7 @@ The team mixes macOS and Windows, so the build must work on both without per-mac
 
 ---
 
-## 9. Risks
+## 10. Risks
 
 | Risk | Response |
 | --- | --- |

@@ -26,6 +26,37 @@ export const OPENMAPTILES_SOURCE = "openmaptiles";
 const TILEJSON_URL = "https://tiles.openfreemap.org/planet";
 const GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
 
+/**
+ * Tiles and glyphs written by scripts/build_offline_tiles.py.
+ *
+ * Absolute, not root-relative. MapLibre fetches tiles from a web worker, where
+ * there is no document to resolve a relative URL against, and it fails with
+ * "Failed to parse URL from /offline/tiles/...". The origin is only read in
+ * the browser; these components never render on the server (doc 03 §2.3.5).
+ */
+const offlineOrigin = () =>
+  typeof window === "undefined" ? "" : window.location.origin;
+const offlineTilesUrl = () => `${offlineOrigin()}/offline/tiles/{z}/{x}/{y}.pbf`;
+const offlineGlyphsUrl = () =>
+  `${offlineOrigin()}/offline/fonts/{fontstack}/{range}.pbf`;
+const OFFLINE_MINZOOM = 11;
+const OFFLINE_MAXZOOM = 14;
+
+/**
+ * Serve the basemap from disk instead of the network.
+ *
+ * Doc 03 §2.3.2's insurance against venue Wi-Fi. Layers 2 and 3 are already
+ * local, so with this on the entire demo runs offline. Run
+ * `python scripts/build_offline_tiles.py` first -- the package is committed,
+ * so normally it is already there.
+ */
+export const OFFLINE_TILES = process.env.NEXT_PUBLIC_OFFLINE_TILES === "on";
+
+const ATTRIBUTION =
+  '<a href="https://openfreemap.org" target="_blank" rel="noreferrer">OpenFreeMap</a> ' +
+  '&copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noreferrer">OpenMapTiles</a> ' +
+  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors';
+
 /** Ids of the layers this style defines, so other code can insert relative to them. */
 export const contextLayerIds = {
   /** Tile buildings, extruded for depth. Layer 2 is drawn just after this. */
@@ -66,16 +97,20 @@ const CONTEXT_BUILDINGS_MAXZOOM = 15.5;
 export function buildContextStyle(): StyleSpecification {
   return {
     version: 8,
-    glyphs: GLYPHS_URL,
+    glyphs: OFFLINE_TILES ? offlineGlyphsUrl() : GLYPHS_URL,
     sources: {
-      [OPENMAPTILES_SOURCE]: {
-        type: "vector",
-        url: TILEJSON_URL,
-        attribution:
-          '<a href="https://openfreemap.org" target="_blank" rel="noreferrer">OpenFreeMap</a> ' +
-          '&copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noreferrer">OpenMapTiles</a> ' +
-          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
-      },
+      // Offline needs explicit zoom bounds: there is no TileJSON on disk to
+      // declare them, and without them MapLibre requests zooms we never
+      // downloaded and renders nothing.
+      [OPENMAPTILES_SOURCE]: OFFLINE_TILES
+        ? {
+            type: "vector",
+            tiles: [offlineTilesUrl()],
+            minzoom: OFFLINE_MINZOOM,
+            maxzoom: OFFLINE_MAXZOOM,
+            attribution: ATTRIBUTION,
+          }
+        : { type: "vector", url: TILEJSON_URL, attribution: ATTRIBUTION },
     },
     layers: [
       {

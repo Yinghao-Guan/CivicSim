@@ -18,6 +18,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import BuildingPanel from "@/components/panels/BuildingPanel";
 import {
   CAMERA,
+  MAX_PIXEL_RATIO,
   SLICE_SOURCE,
   addSliceLayers,
   addVenueMarker,
@@ -57,9 +58,7 @@ export default function CityMap({ onReady }: CityMapProps) {
       minZoom: CAMERA.minZoom,
       maxZoom: CAMERA.maxZoom,
       attributionControl: { compact: false },
-      // Keeps the demo honest about what the machine can do; see doc 03
-      // section 4.3 on capping this if a high-DPI display stutters.
-      pixelRatio: Math.min(window.devicePixelRatio ?? 1, 2),
+      pixelRatio: Math.min(window.devicePixelRatio ?? 1, MAX_PIXEL_RATIO),
     });
     mapRef.current = map;
 
