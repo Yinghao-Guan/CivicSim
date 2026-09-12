@@ -78,3 +78,34 @@ def walk_geometry(path: Sequence[Hashable]) -> list[Coordinate]:
             if not line or point != line[-1]:
                 line.append(point)
     return line
+
+
+#: Typical walking pace used to turn street distance into minutes.
+WALKING_SPEED_M_PER_MIN = 84.0  # 1.4 m/s
+
+
+def _nearest_street_index(point: Coordinate) -> int:
+    nodes, graph = _streets()
+    return min(graph.nodes, key=lambda index: metres(point, nodes[index]))
+
+
+def walks_from(origin: Coordinate, targets: Sequence[Coordinate]) -> list[tuple[float, list[Coordinate]] | None]:
+    """Shortest street walk from `origin` to each target: (metres, drawn line).
+
+    The first and last legs, from the point to the street and from the street
+    to the target, are counted as straight lines. None marks a target with no
+    street path from the origin.
+    """
+    nodes, graph = _streets()
+    start = _nearest_street_index(origin)
+    distances, paths = nx.single_source_dijkstra(graph, start, weight="length")
+    walks: list[tuple[float, list[Coordinate]] | None] = []
+    for target in targets:
+        end = _nearest_street_index(target)
+        if end not in paths:
+            walks.append(None)
+            continue
+        line = [origin, *(nodes[index] for index in paths[end]), target]
+        length = metres(origin, nodes[start]) + distances[end] + metres(nodes[end], target)
+        walks.append((length, [p for k, p in enumerate(line) if k == 0 or p != line[k - 1]]))
+    return walks

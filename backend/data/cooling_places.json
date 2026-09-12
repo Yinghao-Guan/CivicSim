@@ -1,0 +1,127 @@
+{
+  "source": "OpenStreetMap via buildings.geojson (M1), ODbL",
+  "places": [
+    {
+      "id": "aurora_elementary_school",
+      "name": "Aurora Elementary School",
+      "facility_type": "school",
+      "location": [
+        -118.25732,
+        33.994707
+      ],
+      "building_ids": [
+        "r6127002",
+        "w409370070",
+        "w409370217"
+      ]
+    },
+    {
+      "id": "diego_rivera_learning_complex",
+      "name": "Diego Rivera Learning Complex",
+      "facility_type": "school",
+      "location": [
+        -118.255463,
+        33.983335
+      ],
+      "building_ids": [
+        "w1488452985",
+        "w403623865",
+        "w403623866",
+        "w403623867",
+        "w403623868",
+        "w403623869",
+        "w412524227",
+        "w412524232",
+        "w412524233",
+        "w412524235",
+        "w412524236",
+        "w412845685",
+        "w412845686"
+      ]
+    },
+    {
+      "id": "dr_lawrence_h_moore_elementary_school",
+      "name": "Dr. Lawrence H. Moore Elementary School",
+      "facility_type": "school",
+      "location": [
+        -118.251329,
+        33.984682
+      ],
+      "building_ids": [
+        "w439076946",
+        "w439076948",
+        "w439076951",
+        "w439077271",
+        "w439077425"
+      ]
+    },
+    {
+      "id": "los_angeles_academy_middle_school",
+      "name": "Los Angeles Academy Middle School",
+      "facility_type": "school",
+      "location": [
+        -118.263286,
+        33.990963
+      ],
+      "building_ids": [
+        "r6127030",
+        "w409378730",
+        "w409378919",
+        "w409379094",
+        "w409379605",
+        "w409379643",
+        "w409379804",
+        "w409379805",
+        "w409379861",
+        "w409380126",
+        "w409380552"
+      ]
+    },
+    {
+      "id": "mary_mcleod_bethune_swimming_pool",
+      "name": "Mary McLeod Bethune Swimming Pool",
+      "facility_type": "sports_centre",
+      "location": [
+        -118.253259,
+        33.984173
+      ],
+      "building_ids": [
+        "w412845684"
+      ]
+    },
+    {
+      "id": "slauson_senior_multipurpose_center",
+      "name": "Slauson Senior Multipurpose Center",
+      "facility_type": "community_centre",
+      "location": [
+        -118.247248,
+        33.994511
+      ],
+      "building_ids": [
+        "w409363969"
+      ]
+    },
+    {
+      "id": "thomas_a_edison_middle_school",
+      "name": "Thomas A. Edison Middle School",
+      "facility_type": "school",
+      "location": [
+        -118.250843,
+        33.981296
+      ],
+      "building_ids": [
+        "w440196369",
+        "w440196387",
+        "w440196401",
+        "w440196430",
+        "w440196435",
+        "w440196439",
+        "w440196441",
+        "w440196447",
+        "w440196450",
+        "w440196510",
+        "w440965717"
+      ]
+    }
+  ]
+}

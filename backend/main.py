@@ -8,19 +8,28 @@ Endpoints follow docs/03-api-contract.md sections 5, 6 and 12.
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.schemas import BaselineResponse, ScenarioResponse, SimulateRequest
+from api.schemas import (
+    BaselineResponse,
+    CoolingWalkModel,
+    NearestCoolingResponse,
+    ScenarioResponse,
+    SimulateRequest,
+)
 from api.serializers import to_candidate_model, to_scenario_response
 from api.store import ScenarioStore, derive_scenario_id
+from data.cooling_places import cooling_places
 from data.demo_neighborhood import (
     BASELINE_DESTINATION,
     CANDIDATE_SITES,
+    DEMO_AREA_SWNE,
     build_demo_cohort,
     build_demo_graph,
     site,
 )
+from data.street_geometry import WALKING_SPEED_M_PER_MIN, walks_from
 from simulation.scenarios import (
     BASELINE_SCENARIO_ID,
     evaluate_baseline,
@@ -109,6 +118,38 @@ def get_scenario(scenario_id: str) -> ScenarioResponse:
             },
         )
     return to_scenario_response(result)
+
+
+@app.get("/cooling/nearest", response_model=NearestCoolingResponse)
+def nearest_cooling(
+    lon: float = Query(..., description="Longitude of the resident's location"),
+    lat: float = Query(..., description="Latitude of the resident's location"),
+    limit: int = Query(3, ge=1, le=10),
+) -> NearestCoolingResponse:
+    """Cooling places ordered by walking time along real streets."""
+    south, west, north, east = DEMO_AREA_SWNE
+    if not (west <= lon <= east and south <= lat <= north):
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "outside_demo_area", "message": "The location is outside the demo area."},
+        )
+    places = cooling_places()
+    walks = walks_from((lon, lat), [place.location for place in places])
+    results = [
+        CoolingWalkModel(
+            id=place.id,
+            name=place.name,
+            facility_type=place.facility_type,
+            location=place.location,
+            walk_metres=round(walk[0], 1),
+            walk_minutes=round(walk[0] / WALKING_SPEED_M_PER_MIN, 1),
+            path=walk[1],
+        )
+        for place, walk in zip(places, walks)
+        if walk is not None
+    ]
+    results.sort(key=lambda result: result.walk_metres)
+    return NearestCoolingResponse(origin=(lon, lat), places=results[:limit])
 
 
 def _resolve_site(cooling_center: str):

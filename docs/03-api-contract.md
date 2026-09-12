@@ -576,6 +576,37 @@ The frontend must not depend on persistent server storage.
 
 ---
 
+## 12a. `GET /cooling/nearest` (added 2026-09-12)
+
+Added with agreement from both workstreams for the "click a building" lookup. It is independent of the scenario simulation and changes no existing endpoint.
+
+```http
+GET /cooling/nearest?lon=-118.25747&lat=33.9853&limit=3
+```
+
+Returns the cooling places (the facilities M1 marked eligible: schools, Slauson Senior Multipurpose Center, Mary McLeod Bethune Swimming Pool — `backend/data/cooling_places.json`) ordered by walking distance along real OpenStreetMap streets.
+
+```json
+{
+  "origin": [-118.25747, 33.9853],
+  "places": [
+    {
+      "id": "mary_mcleod_bethune_swimming_pool",
+      "name": "Mary McLeod Bethune Swimming Pool",
+      "facility_type": "sports_centre",
+      "location": [-118.25328, 33.98418],
+      "walk_metres": 512.4,
+      "walk_minutes": 6.1,
+      "path": [[-118.25747, 33.9853], [-118.2571, 33.9851]]
+    }
+  ]
+}
+```
+
+`walk_minutes` assumes 1.4 m/s. A location outside the demo area returns `400` with code `outside_demo_area`.
+
+---
+
 ## 13. Errors
 
 Keep error behavior simple and predictable.

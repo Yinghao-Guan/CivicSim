@@ -98,6 +98,25 @@ class BaselineResponse(BaseModel):
     candidates: list[CandidateSiteModel]
 
 
+class CoolingWalkModel(BaseModel):
+    """One cooling place and the street walk to it (nearest-cooling lookup)."""
+
+    id: str
+    name: str
+    facility_type: str
+    location: Coordinate
+    walk_metres: float
+    walk_minutes: float
+    path: list[Coordinate]
+
+
+class NearestCoolingResponse(BaseModel):
+    """GET /cooling/nearest: cooling places ordered by walking time."""
+
+    origin: Coordinate
+    places: list[CoolingWalkModel]
+
+
 class SimulateRequest(BaseModel):
     """docs/03-api-contract.md section 6.
 
