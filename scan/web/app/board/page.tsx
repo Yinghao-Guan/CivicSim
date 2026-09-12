@@ -149,7 +149,8 @@ function PhoneInvite() {
   const [url, setUrl] = useState("");
 
   useEffect(() => {
-    const phoneUrl = window.location.origin + "/";
+    // The phone page is this zone's root, under the main app's /community path.
+    const phoneUrl = window.location.origin + "/community";
     setUrl(phoneUrl);
     QRCode.toDataURL(phoneUrl, { margin: 1, width: 360, color: { dark: "#1f1c17", light: "#fbf8f2" } })
       .then(setQr)

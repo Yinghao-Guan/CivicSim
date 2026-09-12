@@ -9,8 +9,8 @@ feature, delete `scan/`.
 
 ```
 scan/api   FastAPI on :8001   photo → EXIF GPS + Gemini detection; issue + location → fix + modeled impact
-scan/web   Next.js on :3001   /       phone: Photo → Location → Issue → Submit
-                              /board  desktop: live list of reports with fix + modeled impact
+scan/web   Next.js on :3001   /community        phone: Photo → Location → Issue → Submit
+                              /community/board  desktop: live list of reports with fix + modeled impact
 ```
 
 The phone never shows the impact. Submitting stores the report (JSON + photo in
@@ -39,16 +39,22 @@ npm run dev                 # http://localhost:3001
 Without a Gemini key everything still works except automatic detection: the
 Issue step falls back to picking the type by hand.
 
+### Inside the main app
+
+`scan/web` has `basePath: "/community"`. The main web app on :3000 proxies
+`/community/*` to it and `/scan-api/*` to the API, so the studio and the board
+share one origin: the studio's chooser links straight to `/community/board`.
+
 ### On a phone
 
 Geolocation ("Use my current location") only works over HTTPS. Tunnel the web
 app; the API is proxied through it at `/scan-api`, so one tunnel is enough:
 
 ```bash
-cloudflared tunnel --url http://localhost:3001
+cloudflared tunnel --url http://localhost:3000
 ```
 
-Open `https://<tunnel>/board` on the laptop. Its QR code points phones at the
+Open `https://<tunnel>/community/board` on the laptop. Its QR code points phones at the
 same tunnel, so the audience can scan it straight off the screen. "Clear all
 reports" at the bottom of the board wipes test data before a demo.
 

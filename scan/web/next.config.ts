@@ -9,9 +9,13 @@ const SCAN_API_URL = process.env.SCAN_API_URL ?? "http://localhost:8001";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Served as a zone of the main web app: web/ proxies /community/* here, so the
+  // board and the phone page share the studio's origin (and one HTTPS tunnel).
+  basePath: "/community",
   allowedDevOrigins: ["*.trycloudflare.com", "*.ngrok-free.app", "*.ngrok.app", "*.local"],
   async rewrites() {
-    return [{ source: "/scan-api/:path*", destination: `${SCAN_API_URL}/:path*` }];
+    // basePath: false keeps the API at the origin root, where web/ also proxies it.
+    return [{ source: "/scan-api/:path*", destination: `${SCAN_API_URL}/:path*`, basePath: false }];
   },
 };
 
