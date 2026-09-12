@@ -70,3 +70,6 @@ backend/data/*.pkl
 *.log
 *.swp
 *.swo
+
+# ---- Overpass response cache (large, regenerable by scripts/) ----
+data/.cache/

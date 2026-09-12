@@ -35,7 +35,7 @@ Resolves all four open items in doc 03 §3.4. Doing this first prevents rework i
 
 ---
 
-### M1 — Preprocessing script → `buildings.geojson`
+### M1 — Preprocessing script → `buildings.geojson` ✅ done 2026-09-12
 
 Layout, alongside `web/` (and a later `backend/`):
 
@@ -50,7 +50,7 @@ data/        generated artifacts (committed)
 - **Candidate facilities:** tag plausible sites from OSM (`amenity=community_centre`, `amenity=library`, `leisure=sports_centre`, `amenity=school`). Mark them all; leave `candidate_site` unset until the three official candidate sites are chosen during scenario design.
 - Script is idempotent and prints the output feature count and file size. At slice scale this should be single-digit megabytes — materially more means the bbox is too large.
 
-**Done when:** `data/buildings.geojson` exists, its feature count matches the M0 measurement, and a spot check of several features shows complete attributes.
+**Done when:** `data/buildings.geojson` exists, its feature count matches the M0 measurement, and a spot check of several features shows complete attributes. *Results: §4.*
 
 ---
 
@@ -98,7 +98,7 @@ May follow M4, but must not be forgotten.
 
 ## 2. Designing for the district-scale expansion
 
-Per doc 03 §4.2, the pressure point at CD 8/9/10 scale is data loading, not the GPU. Keep layer ②'s source behind a thin abstraction in `lib/map.ts` so swapping `geojson` for PMTiles is a local change. The tippecanoe → PMTiles pipeline is the only step that needs POSIX tooling; see §4.
+Per doc 03 §4.2, the pressure point at CD 8/9/10 scale is data loading, not the GPU. Keep layer ②'s source behind a thin abstraction in `lib/map.ts` so swapping `geojson` for PMTiles is a local change. The tippecanoe → PMTiles pipeline is the only step that needs POSIX tooling; see §5.
 
 ---
 
@@ -146,7 +146,7 @@ This box is **50% larger than the 1.5–2 km² doc 03 §3.1 originally specified
 
 *(measured across the full 3.5 × 3.5 km survey area; 95.7% within the chosen box)*
 
-Values are fine-grained decimals — 4.0, 4.2, 3.8, 3.9 m and so on — characteristic of the LA County LARIAC LiDAR import rather than hand-entered estimates. **The §5 risk of a uniform 5 m slab field is retired: OSM is a sufficient building source and no switch to a separate LARIAC dataset is needed.** The fallback chain stays in the M1 script as a safety net, but its `building:levels` step will almost never fire.
+Values are fine-grained decimals — 4.0, 4.2, 3.8, 3.9 m and so on — characteristic of the LA County LARIAC LiDAR import rather than hand-entered estimates. **The §6 risk of a uniform 5 m slab field is retired: OSM is a sufficient building source and no switch to a separate LARIAC dataset is needed.** The fallback chain stays in the M1 script as a safety net, but its `building:levels` step will almost never fire.
 
 Height distribution:
 
@@ -187,7 +187,93 @@ The Alameda rail/industrial corridor lies at roughly `-118.2341`, **2.16 km east
 
 ---
 
-## 4. Cross-platform conventions
+## 4. M1 results
+
+**Completed 2026-09-12.** `data/buildings.geojson` is built and committed.
+
+Run it with:
+
+```bash
+python -m pip install -r scripts/requirements.txt
+python scripts/build_buildings.py
+```
+
+`--force` refetches from Overpass instead of using the on-disk cache in `data/.cache/` (gitignored).
+
+### 4.1 Files
+
+| File | Role |
+| --- | --- |
+| `scripts/demo_area.py` | The bounding box, venue, M0 expectations, and facility classification — one definition shared by every later preprocessing step |
+| `scripts/overpass.py` | Overpass client: retries, and a cache keyed on the query text |
+| `scripts/geometry.py` | Ring assembly, centroid, point-in-polygon, RFC 7946 winding — pure Python |
+| `scripts/build_buildings.py` | The M1 script itself |
+| `scripts/requirements.txt` | `requests` only |
+| `data/buildings.geojson` | Output: 4,887 buildings, 2.93 MB |
+
+### 4.2 Output
+
+| Measure | Value |
+| --- | --- |
+| Buildings | **4,887** (M0 predicted 4,883 — see below) |
+| File size | 2.93 MB |
+| Height `measured` | 4,676 — **95.7%** |
+| Height `levels` | 0 — **0.0%** |
+| Height `default` (5 m) | 211 — 4.3% |
+| Footprint area | p50 112 m², p99 2,281 m², max 14,325 m² |
+| Polygons with holes | 9 |
+| Multipolygons | 0 |
+
+The 4-building difference from M0 is expected and not drift: M0 counted Overpass `out center`, which is the centre of a way's *bounding box*, whereas the script computes the true area-weighted centroid. The two disagree only for irregular footprints straddling the boundary. The script checks itself against M0's figure and fails with a warning if it drifts more than 5%.
+
+The `building:levels` step of the fallback chain never fires, exactly as M0 predicted. It stays in the code as a safety net for a future, wider area.
+
+**The Beehive is in the data** as `w407792633` — 6 m from the venue coordinate, named, 7.4 m tall. Useful as the anchor for doc 03 §3.2's "this is the neighborhood we are sitting in" framing.
+
+### 4.3 Facility buildings
+
+| Facility | Buildings | Pool |
+| --- | --- | --- |
+| Diego Rivera Learning Complex | 13 | candidate |
+| Los Angeles Academy Middle School | 11 | candidate |
+| Thomas A. Edison Middle School | 11 | candidate |
+| Dr. Lawrence H. Moore Elementary School | 5 | candidate |
+| Aurora Elementary School | 3 | candidate |
+| Mary McLeod Bethune Swimming Pool | 1 | candidate |
+| Slauson Senior Multipurpose Center | 1 | candidate |
+| Augustus F. Hawkins Natural Park | 2 | context |
+| Mary McLeod Bethune Park | 1 | context |
+| (unnamed place of worship) | 1 | context |
+
+46 buildings are `candidate_eligible`; `candidate_site` is `false` everywhere, as scenario design has not chosen the three official sites yet.
+
+A building's own facility tag wins over an enclosing campus polygon, and where campuses nest, the smallest containing polygon wins — so a building inside the Slauson sports centre, itself inside Slauson Recreation Center, is attributed to the sports centre.
+
+Churches are carried as `place_of_worship` and parks as `park`, both classified **context only**. South LA churches do host real cooling centers, so dropping them would lose real signal, but whether they belong in the candidate pool is a scenario-design decision rather than a preprocessing one.
+
+### 4.4 Finding: building-level accessibility data does not exist here
+
+**All 4,887 buildings have `accessibility: "unknown"`.** Not one carries an OSM `wheelchair` tag.
+
+This does not threaten doc 01 §5.3's mobility-device reveal, which depends on curb ramps, crossings and sidewalk condition — *edge* attributes on the street graph, to be built in a later milestone — rather than on building entrances. But it does mean the building layer cannot contribute anything to accessibility on its own, and the field will read "unknown" in every M3 side panel. Worth knowing before anyone plans a UI around it.
+
+### 4.5 Two bugs worth recording
+
+Both were caught by the M0 cross-check rather than by reading the output, which is the argument for having written that check.
+
+1. **Catastrophic cancellation in the shoelace formula.** Computing centroids directly on raw lon/lat, shoelace terms near (-118, 34) are on the order of 4×10³ while a building's true area is on the order of 10⁻⁸ square degrees. Summing them destroyed the answer: some centroids landed a kilometre from their own footprint, and 414 buildings were wrongly excluded (4,508 instead of 4,883) while facility matching silently attributed buildings to the wrong campus. `signed_area` and `centroid` now translate to a local origin first. Any later geometry work on lon/lat must do the same.
+2. **CRLF on Windows.** `Path.write_text` translates `
+` to `
+` on Windows, so the same script produced different bytes on a PC than on a Mac — precisely what §5's conventions exist to prevent. The write now passes `newline="
+"`.
+
+Separately, OSM ways carry no consistent winding: 4,848 of 4,887 outer rings came back clockwise. Output is now normalised to RFC 7946 (outer counter-clockwise, holes clockwise) because tippecanoe, needed for the district-scale export in §2, cares even though MapLibre does not.
+
+The output is byte-for-byte identical across runs, so re-running produces an empty git diff.
+
+---
+
+## 5. Cross-platform conventions
 
 The team mixes macOS and Windows, so the build must work on both without per-machine instructions.
 
@@ -199,7 +285,7 @@ The team mixes macOS and Windows, so the build must work on both without per-mac
 
 ---
 
-## 5. Risks
+## 6. Risks
 
 | Risk | Response |
 | --- | --- |
