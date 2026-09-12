@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import ReportView from "@/components/ReportView";
+import SiteNav from "@/components/SiteNav";
 import { clearReports, deleteReport, fetchArea, fetchReports, reportPhotoUrl } from "@/lib/api";
 import type { Area, Report } from "@/lib/types";
 
@@ -17,6 +18,9 @@ export default function BoardPage() {
   const [error, setError] = useState<string | null>(null);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const known = useRef<Set<string> | null>(null);
+  // Reports that already existed when the board opened. They stay stored but are not
+  // shown: every visit starts on the waiting screen and only follows new submissions.
+  const history = useRef<Set<string> | null>(null);
 
   useEffect(() => {
     fetchArea().then(setArea).catch((e: Error) => setError(e.message));
@@ -24,9 +28,10 @@ export default function BoardPage() {
 
   const poll = useCallback(async () => {
     try {
-      const next = await fetchReports();
+      const all = await fetchReports();
       setError(null);
-      const ids = new Set(next.map((r) => r.id));
+      if (!history.current) history.current = new Set(all.map((r) => r.id));
+      const next = all.filter((r) => !history.current!.has(r.id));
       if (known.current) {
         const arrived = next.filter((r) => !known.current!.has(r.id));
         if (arrived.length) {
@@ -34,10 +39,8 @@ export default function BoardPage() {
           setSelected(arrived[0].id);
           setFresh((f) => new Set([...f, ...arrived.map((r) => r.id)]));
         }
-      } else if (next.length) {
-        setSelected((current) => current ?? next[0].id);
       }
-      known.current = ids;
+      known.current = new Set(next.map((r) => r.id));
       setReports(next);
     } catch (e) {
       setError((e as Error).message);
@@ -80,12 +83,13 @@ export default function BoardPage() {
   const current = reports.find((r) => r.id === selected) ?? null;
 
   return (
+    <>
+    <SiteNav />
     <main className="board">
       <aside className="board-side">
-        <header className="board-brand">
-          {/* A plain link: /start lives in the main app, outside this zone's basePath. */}
-          <a className="brand" href="/start" title="Back to CivicSim">CivicSim <em>Scan</em></a>
-          <span className="tiny muted">Resident reports</span>
+        <header className="board-heading">
+          <h1>Resident reports</h1>
+          <p className="tiny muted">Live from residents&rsquo; phones, since this board opened.</p>
         </header>
 
         {error && <p className="small warn">{error}</p>}
@@ -142,6 +146,7 @@ export default function BoardPage() {
         )}
       </section>
     </main>
+    </>
   );
 }
 

@@ -404,10 +404,18 @@ a { text-decoration: none; }
 .studio-map { position: absolute; inset: 0; background: var(--studio-paper); }
 .studio-map__canvas { width: 100%; height: 100%; opacity: 0; transition: opacity 1.4s var(--ease-out); }
 .studio-map__canvas.is-ready { opacity: 1; }
-.studio-topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 3; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; pointer-events: none; }
-.studio-topbar > * { pointer-events: auto; }
-.studio-brand { font-size: 17px; font-weight: 620; letter-spacing: -.035em; }
-.studio-topbar span { color: var(--studio-quiet); font-size: 11px; }
+/* Shared top bar for the City Twin and the Community Board (mirrored in scan/web/app/globals.css). */
+.site-nav { position: absolute; top: 0; left: 0; right: 0; z-index: 3; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px 0 34px; color: #1a1917; pointer-events: none; }
+.site-nav > * { pointer-events: auto; }
+.site-nav__left { display: flex; align-items: center; gap: 22px; }
+.site-nav__brand { color: #1a1917; font-size: 17px; font-weight: 620; letter-spacing: -.035em; text-decoration: none; }
+.site-nav__switch { display: flex; gap: 2px; padding: 3px; border: 1px solid rgba(26, 25, 23, .08); border-radius: 11px; background: rgba(247, 245, 239, .78); backdrop-filter: blur(10px); }
+.site-nav__switch a { padding: 6px 12px; border-radius: 8px; color: #5f5d57; font-size: 12.5px; font-weight: 560; letter-spacing: -.01em; text-decoration: none; transition: background .2s, color .2s; }
+.site-nav__switch a:hover { color: #1a1917; background: rgba(255, 255, 255, .6); }
+.site-nav__switch a[aria-current="page"] { color: #1a1917; background: #fff; box-shadow: 0 4px 12px -8px rgba(0, 0, 0, .35); }
+.site-nav__place { color: #8a877e; font-size: 11px; }
+/* Over the map, a paper wash keeps basemap labels from running behind the wordmark. */
+.studio .site-nav { height: 76px; padding-bottom: 12px; background: linear-gradient(to bottom, rgba(238, 234, 226, .97) 62%, rgba(238, 234, 226, 0)); }
 .studio-panel {
   position: absolute;
   z-index: 2;
@@ -570,7 +578,7 @@ a { text-decoration: none; }
 @media (max-width: 768px) {
   .studio-panel { top: auto; left: 12px; right: 12px; bottom: 12px; width: auto; max-height: 52vh; padding: 22px; }
   .studio-step h1 { font-size: 26px; }
-  .studio-topbar { padding: 0 18px; }
+  .site-nav { padding: 0 18px; }
 }
 
 /* ---- Start: choose the twin or the community board ------------------------ */

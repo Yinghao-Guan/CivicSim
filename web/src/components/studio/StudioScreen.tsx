@@ -202,9 +202,16 @@ export default function StudioScreen() {
         </aside>
       )}
 
-      <header className="studio-topbar">
-        <Link href="/" className="studio-brand">CivicSim</Link>
-        <span>South Park · Council District 9</span>
+      {/* Same bar as the Community Board (scan/web/components/SiteNav.tsx); keep the two in step. */}
+      <header className="site-nav">
+        <div className="site-nav__left">
+          <Link href="/" className="site-nav__brand">CivicSim</Link>
+          <nav className="site-nav__switch" aria-label="CivicSim sections">
+            <Link href="/studio" aria-current="page">City Twin</Link>
+            <a href="/community/board">Community Board</a>
+          </nav>
+        </div>
+        <span className="site-nav__place">South Park · Council District 9</span>
       </header>
 
       <section className="studio-panel" aria-live="polite">

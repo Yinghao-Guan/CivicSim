@@ -21,15 +21,9 @@ export default function StartScreen() {
   const reducedMotion = useReducedMotion();
   const { setVisualStage } = useExperience();
   const [leaving, setLeaving] = useState<Destination | null>(null);
-  const [reportCount, setReportCount] = useState<number | null>(null);
 
   useEffect(() => {
     router.prefetch("/studio");
-    // A live count is a nice touch, never a requirement: the board works without it.
-    fetch("/scan-api/reports", { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((body: { reports: unknown[] } | null) => { if (body) setReportCount(body.reports.length); })
-      .catch(() => {});
   }, [router]);
 
   const go = (destination: Destination) => {
@@ -89,7 +83,8 @@ export default function StartScreen() {
           </span>
           <span className="start-card__visual start-card__visual--reports" aria-hidden="true">
             <Camera size={18} />
-            <span>{reportCount === null ? "Live resident reports" : `${reportCount} report${reportCount === 1 ? "" : "s"} submitted`}</span>
+            {/* No count: the board opens fresh and only follows reports submitted from then on. */}
+            <span>Reports appear live as residents submit</span>
           </span>
           <span className="start-card__cta">Open the board <ArrowRight size={17} /></span>
         </motion.button>
