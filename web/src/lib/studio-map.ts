@@ -21,6 +21,7 @@ export const STUDIO_COLORS = {
   slice: "#fbfaf6",
   candidate: "#f0b3a1",
   venue: "#3a3934",
+  cooling: "#7fa6d8",
 } as const;
 
 /** The venue's building carries this OSM name in the slice. */
@@ -87,6 +88,8 @@ export function sliceColor(candidateNames: string[], focusName: string | null): 
     ["==", ["coalesce", ["get", "name"], ""], VENUE_BUILDING_NAME], STUDIO_COLORS.venue,
     ["==", facility, focusName ?? "\u0001"], STUDIO_COLORS.vermilion,
     ["in", facility, ["literal", candidateNames]], STUDIO_COLORS.candidate,
+    // Every facility M1 marked eligible is a cooling place residents can walk to.
+    ["==", ["get", "candidate_eligible"], true], STUDIO_COLORS.cooling,
     STUDIO_COLORS.slice,
   ];
 }
@@ -95,6 +98,8 @@ export function sliceColor(candidateNames: string[], focusName: string | null): 
 export function paintCandidates(map: MapLibreMap, candidateNames: string[], focusName: string | null) {
   if (map.getLayer(LAYER.slice)) map.setPaintProperty(LAYER.slice, "fill-extrusion-color", sliceColor(candidateNames, focusName));
 }
+
+export const SLICE_LAYER_ID = LAYER.slice;
 
 export function addStudioSlice(map: MapLibreMap) {
   if (!map.getSource(SLICE_SOURCE)) map.addSource(SLICE_SOURCE, sliceSourceSpec());

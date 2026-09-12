@@ -1,13 +1,14 @@
 "use client";
 
-import { Accessibility, ArrowLeft, ArrowRight, Check, Flame, Loader2, RotateCcw, TriangleAlert, Users } from "lucide-react";
+import { Accessibility, ArrowLeft, ArrowRight, Check, Flame, Loader2, MapPin, RotateCcw, TriangleAlert, Users, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import type { StudioLens, StudioStage } from "@/components/studio/StudioMap";
-import type { CandidateSite, SimulationResponse } from "@/lib/contract";
+import type { CandidateSite, Coordinate, SimulationResponse } from "@/lib/contract";
+import { FACILITY_LABELS, fetchNearestCooling, type NearestCooling } from "@/lib/cooling";
 import { THERMAL_GRADIENT } from "@/lib/studio-map";
 import { BASELINE_ID, useScenarios } from "@/lib/useScenarios";
 
@@ -63,6 +64,19 @@ export default function StudioScreen() {
   const [focusSiteId, setFocusSiteId] = useState<string | null>(null);
   const [lens, setLens] = useState<StudioLens>("all");
   const [showAssumptions, setShowAssumptions] = useState(false);
+  const [nearby, setNearby] = useState<NearestCooling | null>(null);
+  const [nearbyState, setNearbyState] = useState<"idle" | "loading" | "failed">("idle");
+  const [nearbyError, setNearbyError] = useState<string | null>(null);
+
+  const pickLocation = (location: Coordinate) => {
+    setNearbyState("loading");
+    setNearbyError(null);
+    fetchNearestCooling(location)
+      .then((result) => { setNearby(result); setNearbyState("idle"); })
+      .catch((error: unknown) => { setNearbyError(error instanceof Error ? error.message : "Lookup failed"); setNearbyState("failed"); });
+  };
+
+  const clearNearby = () => { setNearby(null); setNearbyState("idle"); setNearbyError(null); };
 
   const baseline = results[BASELINE_ID] ?? null;
   const allRun = candidates.length > 0 && candidates.every((site) => results[site.id]);
@@ -124,8 +138,44 @@ export default function StudioScreen() {
         focusSiteId={focusSiteId}
         lens={lens}
         reducedMotion={reducedMotion}
+        nearby={nearby}
         onSelectSite={focusSite}
+        onPickLocation={pickLocation}
       />
+
+      {load === "ready" && (
+        <aside className={`studio-nearby${nearby || nearbyState !== "idle" ? " is-open" : ""}`} aria-live="polite">
+          {!nearby && nearbyState === "idle" && (
+            <p className="studio-nearby__hint"><MapPin size={14} /> Click any building to find the nearest cooling centers on foot.</p>
+          )}
+          {nearbyState === "loading" && <p className="studio-nearby__hint"><Loader2 size={14} className="spin" /> Walking the streets from here…</p>}
+          {nearbyState === "failed" && <p className="studio-nearby__hint">{nearbyError}</p>}
+          {nearby && nearbyState === "idle" && (
+            <>
+              <header>
+                <div>
+                  <small>From this building</small>
+                  <strong>{nearby.places[0] ? `${Math.round(nearby.places[0].walk_minutes)} min to cooling` : "No cooling center on foot"}</strong>
+                </div>
+                <button onClick={clearNearby} aria-label="Clear location"><X size={15} /></button>
+              </header>
+              <ol>
+                {nearby.places.map((place, rank) => (
+                  <li key={place.id} className={rank === 0 ? "is-closest" : ""}>
+                    <span className="studio-nearby__rank">{rank + 1}</span>
+                    <span className="studio-nearby__name">
+                      <strong>{place.name}</strong>
+                      <small>{FACILITY_LABELS[place.facility_type] ?? place.facility_type} · {integer.format(Math.round(place.walk_metres))} m</small>
+                    </span>
+                    <b>{Math.round(place.walk_minutes)}<small> min</small></b>
+                  </li>
+                ))}
+              </ol>
+              <p className="studio-note">Walking along real streets at 1.4 m/s.</p>
+            </>
+          )}
+        </aside>
+      )}
 
       <header className="studio-topbar">
         <Link href="/" className="studio-brand">CivicSim</Link>
@@ -154,14 +204,12 @@ export default function StudioScreen() {
           {load === "ready" && stage === "brief" && (
             <motion.div key="brief" className="studio-step" {...panelMotion}>
               <p className="studio-kicker">Scenario 01 · Extreme heat</p>
-              <h1>One cooling center.<br />Three possible sites.</h1>
-              <p className="studio-body">South Park is funding one new cooling center. Where it opens decides who can walk to relief during a heat wave—and who can&apos;t.</p>
-              {baseline && (
-                <div className="studio-stat">
-                  <strong>{integer.format(baseline.metrics.population_reached)}</strong>
-                  <span>modeled residents reach today&apos;s cooling center within 15 minutes</span>
-                </div>
-              )}
+              <h1>One more cooling center.<br />Three possible sites.</h1>
+              <p className="studio-body">South Park&apos;s cooling centers are a long, hot walk from many homes. The city can fund one more—where it opens decides who can walk to relief during a heat wave, and who can&apos;t.</p>
+              <div className="studio-stat studio-stat--cooling">
+                <strong>7</strong>
+                <span>cooling centers in the area today—schools, a senior center and a public pool, shown in blue. Click any building to see how far relief is on foot.</span>
+              </div>
               {heatRange && (
                 <figure className="studio-legend">
                   <figcaption>Street heat · share of each walk in unshaded heat</figcaption>

@@ -6,11 +6,12 @@ import maplibregl, { type Map as MapLibreMap, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef, useState } from "react";
 
+import type { NearestCooling } from "@/lib/cooling";
 import type { AgentRoute, CandidateSite, Coordinate, HeatmapPoint, SimulationResponse, UnreachableAgent } from "@/lib/contract";
 import { DEMO_AREA_BOUNDS, VENUE } from "@/lib/demoArea.generated";
 import { MAX_PIXEL_RATIO } from "@/lib/map";
 import { buildContextStyle } from "@/lib/mapStyle";
-import { STUDIO_COLORS, addHeatField, addStudioSlice, boundsOf, paintCandidates, restyleContext } from "@/lib/studio-map";
+import { SLICE_LAYER_ID, STUDIO_COLORS, addHeatField, addStudioSlice, boundsOf, paintCandidates, restyleContext } from "@/lib/studio-map";
 
 export type StudioStage = "brief" | "sites" | "running" | "results";
 export type StudioLens = "all" | "heat_vulnerable" | "mobility_constrained";
@@ -23,10 +24,13 @@ type StudioMapProps = {
   focusSiteId: string | null;
   lens: StudioLens;
   reducedMotion: boolean;
+  nearby: NearestCooling | null;
   onSelectSite: (siteId: string) => void;
+  onPickLocation: (location: Coordinate) => void;
 };
 
 const VERMILION: [number, number, number] = [226, 70, 42];
+const COOL_BLUE: [number, number, number] = [47, 104, 184];
 const GRAPHITE: [number, number, number] = [74, 72, 67];
 const PANEL_PADDING = { top: 90, bottom: 90, left: 480, right: 80 };
 /** Seconds for a resident to walk a route in the animation, whatever its length. */
@@ -78,6 +82,29 @@ function scenarioLayers(routes: AgentRoute[], unreachable: UnreachableAgent[], l
   ];
 }
 
+/** Walks from a clicked building to its nearest cooling places, closest first and boldest. */
+function nearbyLayers(nearby: NearestCooling) {
+  const ranked = nearby.places.map((place, rank) => ({ ...place, rank }));
+  return [
+    new PathLayer<(typeof ranked)[number]>({
+      id: "nearby-walks", data: ranked, getPath: (d) => d.path,
+      getColor: (d) => [...COOL_BLUE, d.rank === 0 ? 245 : 150], getWidth: (d) => (d.rank === 0 ? 5 : 3), widthUnits: "pixels",
+      capRounded: true, jointRounded: true, parameters: { depthCompare: "always" },
+    }),
+    new ScatterplotLayer<(typeof ranked)[number]>({
+      id: "nearby-places", data: ranked, getPosition: (d) => d.location,
+      getFillColor: [247, 245, 239, 255], getLineColor: [...COOL_BLUE, 255], stroked: true,
+      getLineWidth: 3, lineWidthUnits: "pixels", getRadius: (d) => (d.rank === 0 ? 9 : 6), radiusUnits: "pixels",
+      parameters: { depthCompare: "always" },
+    }),
+    new ScatterplotLayer<Coordinate>({
+      id: "nearby-origin", data: [nearby.origin], getPosition: (d) => d,
+      getFillColor: [26, 25, 23, 255], getLineColor: [247, 245, 239, 255], stroked: true,
+      getLineWidth: 3, lineWidthUnits: "pixels", getRadius: 8, radiusUnits: "pixels", parameters: { depthCompare: "always" },
+    }),
+  ];
+}
+
 function markerElement(letter: string, name: string) {
   const element = document.createElement("button");
   element.type = "button";
@@ -88,15 +115,17 @@ function markerElement(letter: string, name: string) {
   return element;
 }
 
-export default function StudioMap({ stage, candidates, heatmap, scenario, focusSiteId, lens, reducedMotion, onSelectSite }: StudioMapProps) {
+export default function StudioMap({ stage, candidates, heatmap, scenario, focusSiteId, lens, reducedMotion, nearby, onSelectSite, onPickLocation }: StudioMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const overlayRef = useRef<MapboxOverlay | null>(null);
   const markers = useRef<Map<string, Marker>>(new Map());
   const selectRef = useRef(onSelectSite);
+  const pickRef = useRef(onPickLocation);
   const [ready, setReady] = useState(false);
 
   useEffect(() => { selectRef.current = onSelectSite; }, [onSelectSite]);
+  useEffect(() => { pickRef.current = onPickLocation; }, [onPickLocation]);
 
   useEffect(() => {
     if (!container.current) return;
@@ -124,6 +153,10 @@ export default function StudioMap({ stage, candidates, heatmap, scenario, focusS
     map.once("load", () => {
       restyleContext(map);
       addStudioSlice(map);
+      // Any building in the slice can stand in for "where I am".
+      map.on("click", SLICE_LAYER_ID, (event) => pickRef.current([event.lngLat.lng, event.lngLat.lat]));
+      map.on("mouseenter", SLICE_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", SLICE_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
       const overlay = new MapboxOverlay({ interleaved: true, layers: [] });
       map.addControl(overlay);
       overlayRef.current = overlay;
@@ -191,20 +224,29 @@ export default function StudioMap({ stage, candidates, heatmap, scenario, focusS
     const overlay = overlayRef.current;
     if (!ready || !overlay) return;
     const show = scenario && (stage === "results" || stage === "running");
+    const walks = nearby ? nearbyLayers(nearby) : [];
     if (!show) {
-      overlay.setProps({ layers: [] });
+      overlay.setProps({ layers: walks });
       return;
     }
     let frame = 0;
     const start = performance.now();
     const draw = () => {
       const clock = reducedMotion ? WALK_SECONDS * 0.6 : (performance.now() - start) / 1000;
-      overlay.setProps({ layers: scenarioLayers(scenario.routes, scenario.unreachable_agents, lens, clock) });
+      overlay.setProps({ layers: [...scenarioLayers(scenario.routes, scenario.unreachable_agents, lens, clock), ...walks] });
       if (!reducedMotion) frame = requestAnimationFrame(draw);
     };
     draw();
     return () => cancelAnimationFrame(frame);
-  }, [lens, ready, reducedMotion, scenario, stage]);
+  }, [lens, nearby, ready, reducedMotion, scenario, stage]);
+
+  // Bring a clicked building and its walks into view.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || !nearby?.places.length) return;
+    const points = nearby.places.flatMap((place) => place.path);
+    map.fitBounds(boundsOf(points), { padding: { ...PANEL_PADDING, right: 380 }, maxZoom: 16.2, duration: reducedMotion ? 0 : 1400 });
+  }, [nearby, ready, reducedMotion]);
 
   // MapLibre sets `position: relative` on its container, so the sized box is a wrapper.
   return (
