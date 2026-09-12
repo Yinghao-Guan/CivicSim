@@ -3,7 +3,7 @@
 Enough polygon handling to turn Overpass output into GeoJSON and to test
 which buildings sit inside a facility campus. Intentionally no shapely or
 GDAL: the shapes here are tiny and the dependency is not worth the
-cross-platform install burden (docs/04-map-milestone-plan.md section 4).
+cross-platform install burden (docs/05-map-milestone-plan.md section 9).
 
 Coordinates are (lon, lat) tuples throughout, matching GeoJSON order.
 """

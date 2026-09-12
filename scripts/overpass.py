@@ -2,7 +2,7 @@
 
 Kept deliberately thin: `requests` only, no osmium, no GDAL. Every team
 member can run this on macOS and on native Windows without installing a
-geospatial toolchain (see docs/04-map-milestone-plan.md section 4).
+geospatial toolchain (see docs/05-map-milestone-plan.md section 9).
 """
 
 from __future__ import annotations

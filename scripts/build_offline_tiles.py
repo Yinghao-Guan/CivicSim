@@ -1,8 +1,8 @@
 """Build the offline basemap package for demo day.
 
-Milestone M5 of docs/04-map-milestone-plan.md. Downloads the vector tiles and
+Milestone M5 of docs/05-map-milestone-plan.md. Downloads the vector tiles and
 glyphs the demo area needs into web/public/offline/, so the map keeps working
-when the venue Wi-Fi does not (doc 03 section 2.3.2).
+when the venue Wi-Fi does not (doc 04 section 2.3.2).
 
 Usage:
     python scripts/build_offline_tiles.py
@@ -11,14 +11,14 @@ Usage:
 Layers 2 and 3 are already local, so with this in place the whole demo runs
 offline. Switch the app over with NEXT_PUBLIC_OFFLINE_TILES=on.
 
-Why a tile tree rather than the PMTiles file doc 03 section 2.3.2 imagined:
+Why a tile tree rather than the PMTiles file doc 04 section 2.3.2 imagined:
 PMTiles packs many tiles into one archive addressed by HTTP range requests,
 which is what makes a large area practical. The demo area needs 42 tiles. At
 that size the archive format buys nothing and costs a toolchain -- tippecanoe
 or planetiler, neither of which installs the same way on macOS and Windows --
 so plain files served from public/ are both simpler and more portable. If the
 area grows to district scale, revisit this along with the tiling change in
-docs/04 section 2.
+docs/05 section 2.
 """
 
 from __future__ import annotations

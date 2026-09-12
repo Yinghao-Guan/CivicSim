@@ -23,7 +23,7 @@ inlined at build time, so **restart the dev server** after a change.
 | `NEXT_PUBLIC_OCCLUSION_PROBE` | `on` | `off` hides the M4 probe line |
 | `NEXT_PUBLIC_MAX_PIXEL_RATIO` | `2` | Drop to `1.5` if pitched views stutter on a high-DPI display |
 
-For demo day, follow the runbook in [`../docs/04-map-milestone-plan.md`](../docs/04-map-milestone-plan.md) §8.4 —
+For demo day, follow the runbook in [`../docs/05-map-milestone-plan.md`](../docs/05-map-milestone-plan.md) §8.4 —
 the step that matters is turning Wi-Fi **off** and reloading.
 
 ## Layout
@@ -45,9 +45,9 @@ public/offline/         offline basemap package (42 tiles + glyphs)
 
 - **MapLibre and deck.gl are browser-only.** Map components need `"use client"`
   and must be reached through `MapView`, which loads them with
-  `dynamic(..., { ssr: false })`. See doc 03 §2.3.5.
+  `dynamic(..., { ssr: false })`. See doc 04 §2.3.5.
 - **`lib/demoArea.generated.ts` is generated.** The demo area is defined once in
   `scripts/demo_area.py`; run `python scripts/build_buildings.py` to regenerate.
 
 The three-layer rendering approach, the demo area, and the milestone plan are in
-[`../docs`](../docs) — start with `04-map-milestone-plan.md`.
+[`../docs`](../docs) — start with `05-map-milestone-plan.md`.

@@ -1,5 +1,5 @@
 /**
- * Layer 1 of the three-layer approach in doc 03 section 2.2: the context
+ * Layer 1 of the three-layer approach in doc 04 section 2.2: the context
  * basemap.
  *
  * Written by hand against OpenFreeMap's OpenMapTiles vector source rather
@@ -13,7 +13,7 @@
  *   3. The offline PMTiles swap in M5 becomes a one-line source change.
  *
  * Buildings from these tiles are context only: they carry no ids we control
- * and no simulation attributes, which is exactly why doc 03 section 2.1
+ * and no simulation attributes, which is exactly why doc 04 section 2.1
  * splits the city into three layers. Nothing here is clickable.
  */
 
@@ -32,7 +32,7 @@ const GLYPHS_URL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf"
  * Absolute, not root-relative. MapLibre fetches tiles from a web worker, where
  * there is no document to resolve a relative URL against, and it fails with
  * "Failed to parse URL from /offline/tiles/...". The origin is only read in
- * the browser; these components never render on the server (doc 03 §2.3.5).
+ * the browser; these components never render on the server (doc 04 §2.3.5).
  */
 const offlineOrigin = () =>
   typeof window === "undefined" ? "" : window.location.origin;
@@ -89,7 +89,7 @@ const MINOR_ROAD_CLASSES = ["secondary", "tertiary", "minor", "service"];
  * 1.8 km across, so by zoom ~15.5 the viewport is mostly inside it and there
  * is little context left to lose; below that, buildings are a couple of pixels
  * tall and the depth fight is invisible. When the area grows to district scale
- * (doc 04 §2) our own data becomes PMTiles covering the whole view, and this
+ * (doc 05 §2) our own data becomes PMTiles covering the whole view, and this
  * cut-off goes away with the conflict.
  */
 const CONTEXT_BUILDINGS_MAXZOOM = 15.5;

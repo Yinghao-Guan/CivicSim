@@ -4,7 +4,7 @@
  * The MapLibre instance.
  *
  * `"use client"` is mandatory: MapLibre touches `window` and WebGL at import
- * time, so it cannot be server-rendered (doc 03 section 2.3.5). This component
+ * time, so it cannot be server-rendered (doc 04 section 2.3.5). This component
  * is only ever reached through `MapView`, which loads it with `ssr: false`.
  *
  * M2 builds layer 1 only — the context basemap. Layer 2 (the clickable demo
@@ -70,7 +70,7 @@ export default function CityMap({ onReady }: CityMapProps) {
 
     map.on("error", (event) => {
       // MapLibre surfaces tile failures here. Venue Wi-Fi is the expected
-      // cause (doc 03 section 2.3.2); M5 adds the offline PMTiles fallback.
+      // cause (doc 04 section 2.3.2); M5 adds the offline PMTiles fallback.
       const message = event.error?.message ?? "Unknown map error";
       console.error("[CityMap]", message);
       setError(message);

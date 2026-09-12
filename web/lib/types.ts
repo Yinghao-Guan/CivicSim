@@ -6,7 +6,7 @@
  * the source of truth.
  */
 
-/** How a building's height was determined — see doc 03 section 2.3.1. */
+/** How a building's height was determined — see doc 04 section 2.3.1. */
 export type HeightSource = "measured" | "levels" | "default";
 
 /** Our facility vocabulary, from scripts/demo_area.py. */

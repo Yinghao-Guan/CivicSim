@@ -4,7 +4,7 @@
  * Layer-2 and layer-3 wiring arrives in M3 and M4; this file holds what M2
  * needs and is the place the layer-2 source abstraction will live, so that
  * swapping GeoJSON for PMTiles at district scale stays a local change
- * (doc 04 section 2).
+ * (doc 05 section 2).
  */
 
 import type {
@@ -27,7 +27,7 @@ import { palette } from "./palette";
  * Cap on MapLibre's `pixelRatio`.
  *
  * WebGL renders at the device pixel ratio, so a 3840x2400 external display is
- * ~9M pixels per frame (doc 03 §4.3). If pitched views stutter on demo day,
+ * ~9M pixels per frame (doc 04 §4.3). If pitched views stutter on demo day,
  * set NEXT_PUBLIC_MAX_PIXEL_RATIO=1.5 -- it is the cheapest thing to turn down
  * and costs little at presentation distance.
  */
@@ -64,7 +64,7 @@ const VENUE_LABEL = "venue-label";
 /**
  * Mark The Beehive.
  *
- * An annotation rather than data: it anchors doc 03 section 3.2's "this is the
+ * An annotation rather than data: it anchors doc 04 section 3.2's "this is the
  * neighborhood we are sitting in" framing, and while building the map it is
  * the quickest way to confirm the camera is actually pointed where we think.
  *
@@ -136,7 +136,7 @@ export const sliceLayerIds = { buildings: "slice-buildings" } as const;
  * Vertical exaggeration applied to slice building heights.
  *
  * The neighborhood is genuinely low-rise: the median building is 4.4 m and 99%
- * are under 9.4 m (doc 04 §3.3), so at true scale the extrusion is almost
+ * are under 9.4 m (doc 05 §3.3), so at true scale the extrusion is almost
  * flat and a house is indistinguishable from a warehouse.
  *
  * 2 was chosen against 1 and 3 side by side. It is enough for massing to read
@@ -153,13 +153,13 @@ export const SLICE_HEIGHT_EXAGGERATION: number = 2;
 /**
  * The layer-2 source.
  *
- * Isolated here because doc 04 §2 expects this to become PMTiles when the area
+ * Isolated here because doc 05 §2 expects this to become PMTiles when the area
  * grows to district scale — at which point only this function and the layer's
  * `source-layer` change, not the interaction code.
  *
  * `promoteId` is what makes the rest work: it lifts our own `building_id` into
  * MapLibre's feature id, which `feature-state` needs for hover and selection.
- * Tile-provided buildings have no such id, which is exactly why doc 03 §2.1
+ * Tile-provided buildings have no such id, which is exactly why doc 04 §2.1
  * splits the city into separate layers.
  */
 export function sliceSourceSpec(): SourceSpecification {

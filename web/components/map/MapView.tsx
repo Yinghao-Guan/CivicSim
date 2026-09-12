@@ -4,7 +4,7 @@
  * The only way the rest of the app should reach the map.
  *
  * MapLibre and deck.gl are browser-only, so `CityMap` is loaded with
- * `ssr: false` (doc 03 section 2.3.5). Doing it here, once, means no page has
+ * `ssr: false` (doc 04 section 2.3.5). Doing it here, once, means no page has
  * to remember it.
  */
 

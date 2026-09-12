@@ -1,5 +1,5 @@
 /**
- * Layer 3 of doc 03 §2.2: the deck.gl simulation overlay.
+ * Layer 3 of doc 04 §2.2: the deck.gl simulation overlay.
  *
  * MapLibre renders the city; deck.gl renders what happens in it (doc 02 §16).
  * The overlay is created with `interleaved: true` so deck.gl draws into
@@ -9,7 +9,7 @@
  *
  * M4 adds no real data. It attaches the overlay and draws a probe whose only
  * job is to prove occlusion works in this MapLibre/deck.gl version pair
- * (doc 04 §9). Real agents, routes and heat come in later milestones.
+ * (doc 05 §9). Real agents, routes and heat come in later milestones.
  */
 
 import { MapboxOverlay } from "@deck.gl/mapbox";
@@ -23,7 +23,7 @@ import { palette } from "./palette";
 /**
  * Draw the occlusion probe.
  *
- * Kept rather than deleted once M4 passed, per doc 04 §M4: when real routes
+ * Kept rather than deleted once M4 passed, per doc 05 §M4: when real routes
  * arrive, this is the known-good reference to compare against. Set
  * `NEXT_PUBLIC_OCCLUSION_PROBE=off` to hide it.
  */

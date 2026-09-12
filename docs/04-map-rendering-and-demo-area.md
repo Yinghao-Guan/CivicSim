@@ -53,7 +53,7 @@ Doc 02 §4.2 shows buildings coming from a vector-tile source (`"source-layer": 
 
 Start with a **~3 km² slice around The Beehive** (confirmed CD 9; South Park neighborhood). If time allows, **expand toward full coverage of Council Districts 8, 9, and 10**.
 
-> **Amended 2026-09-12 by M0.** This section originally specified ~1.5–2 km². Surveying the area showed that a 2 km² box contains only **one** facility plausible as a cooling center (the Mary McLeod Bethune pool), which cannot support the three candidate sites doc 01 §18.1 requires. The box was enlarged to 3.00 km² to include the Slauson Senior Multipurpose Center and Slauson Recreation Center cluster. Exact coordinates and measurements: [`04-map-milestone-plan.md`](./04-map-milestone-plan.md) §3.
+> **Amended 2026-09-12 by M0.** This section originally specified ~1.5–2 km². Surveying the area showed that a 2 km² box contains only **one** facility plausible as a cooling center (the Mary McLeod Bethune pool), which cannot support the three candidate sites doc 01 §18.1 requires. The box was enlarged to 3.00 km² to include the Slauson Senior Multipurpose Center and Slauson Recreation Center cluster. Exact coordinates and measurements: [`05-map-milestone-plan.md`](./05-map-milestone-plan.md) §3.
 
 ### 3.2 Why
 
@@ -72,7 +72,7 @@ Start with a **~3 km² slice around The Beehive** (confirmed CD 9; South Park ne
 
 ### 3.4 Verified when building the slice
 
-**All four items resolved by M0 on 2026-09-12.** Results are recorded in [`04-map-milestone-plan.md`](./04-map-milestone-plan.md) §3; summarized here:
+**All four items resolved by M0 on 2026-09-12.** Results are recorded in [`05-map-milestone-plan.md`](./05-map-milestone-plan.md) §3; summarized here:
 
 - **Council district — confirmed CD 9** (Curren D. Price Jr.), by point query against two City of LA boundary layers.
 - **Venue address — 1000 E. 60th St.** (`33.98530, -118.25747`). OSM carries `The Beehive` as a named `amenity=conference_centre` at this point; 950 E. 60th St. is a separate address point ~190 m west.
@@ -108,7 +108,7 @@ Start with a **~3 km² slice around The Beehive** (confirmed CD 9; South Park ne
 
 ## 5. Next steps on the `map` branch
 
-> These four steps are sequenced, with done-criteria and cross-platform notes, in [`04-map-milestone-plan.md`](./04-map-milestone-plan.md). The open items in §3.4 above are resolved there in §3.
+> These four steps are sequenced, with done-criteria and cross-platform notes, in [`05-map-milestone-plan.md`](./05-map-milestone-plan.md). The open items in §3.4 above are resolved there in §3.
 
 1. Scaffold `web/` (Next.js, App Router, TypeScript); load MapLibre with OpenFreeMap, pitched camera on the Beehive area.
 2. Write a preprocessing script that extracts the slice's buildings from OSM into `buildings.geojson` with IDs, heights (with fallbacks), and facility attributes.

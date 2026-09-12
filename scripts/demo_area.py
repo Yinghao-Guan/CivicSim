@@ -4,7 +4,7 @@ The bounding box and facility classification live here rather than in one
 script so that later steps (the street graph, the synthetic population, the
 PMTiles export) all describe the same area without copying coordinates.
 
-Values come from M0; see docs/04-map-milestone-plan.md section 3.
+Values come from M0; see docs/05-map-milestone-plan.md section 3.
 """
 
 from __future__ import annotations
@@ -52,8 +52,8 @@ VENUE_LAT = 33.98530
 VENUE_LON = -118.25747
 
 # 1.80 x 1.66 km = 3.00 km^2, holding the venue plus three distinct
-# cooling-center candidates. Larger than the 1.5-2 km^2 doc 03 first
-# proposed; the reasoning is in docs/04 section 3.4.
+# cooling-center candidates. Larger than the 1.5-2 km^2 doc 04 first
+# proposed; the reasoning is in docs/05 section 3.4.
 DEMO_AREA = BBox(south=33.98100, west=-118.26450, north=33.99600, east=-118.24500)
 
 # What M0 measured for this box. The script compares against these so a
@@ -63,7 +63,7 @@ EXPECTED_BUILDINGS = 4883
 EXPECTED_BUILDINGS_TOLERANCE = 0.05
 
 # Facility kinds eligible to become cooling-center candidates, per
-# docs/04 section M1. Keys are (osm_key, osm_value).
+# docs/05 section M1. Keys are (osm_key, osm_value).
 CANDIDATE_FACILITIES = {
     ("amenity", "community_centre"): "community_centre",
     ("amenity", "library"): "library",
