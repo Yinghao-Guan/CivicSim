@@ -1,4 +1,13 @@
+"use client";
+
+import { useExperience } from "@/components/experience/ExperienceProvider";
+import HeroSceneFallback from "@/components/scene/HeroSceneFallback";
+
 export default function SceneFallback({ loading = false }: { loading?: boolean }) {
+  const { visualStage } = useExperience();
+  if (visualStage === "hero" || visualStage === "entering") {
+    return <div className="scene-fallback scene-fallback--hero" aria-label="An abstract neighborhood with routes converging on a public place"><HeroSceneFallback /></div>;
+  }
   return (
     <div className="scene-fallback" aria-label={loading ? "Loading city twin" : "City twin fallback"}>
       <svg viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
