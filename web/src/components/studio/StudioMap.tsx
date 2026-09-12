@@ -35,6 +35,12 @@ const VERMILION: [number, number, number] = [226, 70, 42];
 const COOL_BLUE: [number, number, number] = [47, 104, 184];
 const GRAPHITE: [number, number, number] = [74, 72, 67];
 const PANEL_PADDING = { top: 90, bottom: 90, left: 480, right: 80 };
+/**
+ * Camera height for a clicked building. Fixed rather than fitted to the walks, so
+ * clicking one building after another never ratchets the view further out.
+ * About 1 km of neighborhood across the open map at this zoom.
+ */
+const NEARBY_ZOOM = 15.3;
 /** Seconds for a resident to walk a route in the animation, whatever its length. */
 const WALK_SECONDS = 5.5;
 
@@ -256,7 +262,7 @@ export default function StudioMap({ stage, candidates, heatmap, scenario, focusS
     map.flyTo({ center: flyToPoint, zoom: 16.2, bearing: map.getBearing(), pitch: map.getPitch(), padding: PANEL_PADDING, duration: reducedMotion ? 0 : 1600 });
   }, [flyToPoint, ready, reducedMotion]);
 
-  // Bring a clicked building and its walks into view without turning or tilting the camera.
+  // Move to a clicked building at a fixed height, without turning or tilting the camera.
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
@@ -265,14 +271,13 @@ export default function StudioMap({ stage, candidates, heatmap, scenario, focusS
       pickedBuilding.current = null;
       return;
     }
-    if (!nearby.places.length) return;
-    const points = nearby.places.flatMap((place) => place.path);
-    map.fitBounds(boundsOf(points), {
-      padding: { ...PANEL_PADDING, right: 380 },
-      maxZoom: map.getZoom(),
+    map.easeTo({
+      center: nearby.origin,
+      zoom: NEARBY_ZOOM,
       bearing: map.getBearing(),
       pitch: map.getPitch(),
-      duration: reducedMotion ? 0 : 1400,
+      padding: { ...PANEL_PADDING, right: 380 },
+      duration: reducedMotion ? 0 : 1200,
     });
   }, [nearby, ready, reducedMotion]);
 
