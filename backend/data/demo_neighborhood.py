@@ -58,7 +58,13 @@ DEMO_EDGES: tuple[tuple[str, str, float, bool, float], ...] = (
     ("res_e3", "j_e", 3.0, True, 2.6),
     # Site C sits beside the eastern junction
     ("j_e", "site_c", 2.0, True, 1.6),
+    # The nearest cooling center that exists today is in the next neighborhood,
+    # out past the northern corner. It is the baseline's only destination.
+    ("j_bypass", "existing_center", 14.0, True, 11.0),
 )
+
+#: The cooling resource residents have today, before any proposal.
+BASELINE_DESTINATION = "existing_center"
 
 #: (agent_id, profile, origin, requires_accessible_route, weight, heat_vulnerable)
 DEMO_COHORT: tuple[tuple[str, str, str, bool, float, bool], ...] = (
@@ -81,33 +87,70 @@ DEMO_COHORT: tuple[tuple[str, str, str, bool, float, bool], ...] = (
 #: Same capacity at every site: one budget, one building size, three locations.
 DEMO_SITE_CAPACITY = 1800
 
-#: Illustrative coordinates in South LA, in [longitude, latitude] order.
-#: They position the demo on a map; they are not surveyed facility locations.
+#: Version tags reported in run metadata so a result can be traced to its input.
+MODEL_VERSION = "demo_neighborhood_v1"
+POPULATION_VERSION = "demo_cohort_v1"
+
+#: Illustrative [longitude, latitude] for every graph node, used to draw routes.
+#:
+#: These position the demo over South LA so the map looks like a real place.
+#: They are not surveyed locations, and straight-line distance between two
+#: nodes is deliberately not proportional to the travel time of the edge
+#: joining them: the accessible bypass is long precisely because it winds.
+NODE_LOCATIONS: dict[str, tuple[float, float]] = {
+    "res_w1": (-118.2996, 34.0142),
+    "res_w2": (-118.2990, 34.0112),
+    "j_w": (-118.2972, 34.0126),
+    "site_a": (-118.3000, 34.0100),
+    "site_b": (-118.2914, 34.0128),
+    "res_mid": (-118.2934, 34.0104),
+    "j_c1": (-118.2898, 34.0098),
+    "j_bypass": (-118.2884, 34.0148),
+    "j_e": (-118.2852, 34.0092),
+    "res_e1": (-118.2846, 34.0118),
+    "res_e2": (-118.2834, 34.0074),
+    "res_e3": (-118.2870, 34.0062),
+    "site_c": (-118.2820, 34.0080),
+    "existing_center": (-118.2902, 34.0196),
+}
+
+
+def location(node: str) -> tuple[float, float]:
+    """The [longitude, latitude] of one graph node."""
+    try:
+        return NODE_LOCATIONS[node]
+    except KeyError as exc:
+        raise ValueError(f"Graph node {node!r} has no demo location.") from exc
+
+#: Setup costs are illustrative demo estimates, not city figures.
 CANDIDATE_SITES: tuple[CandidateSite, ...] = (
     CandidateSite(
         id="site_a",
+        facility_id="facility_a",
         name="Site A",
         node="site_a",
         capacity=DEMO_SITE_CAPACITY,
-        location=(-118.3000, 34.0100),
+        location=NODE_LOCATIONS["site_a"],
         estimated_setup_cost=310_000,
         accessible_entrance=False,
     ),
     CandidateSite(
         id="site_b",
+        facility_id="facility_b",
         name="Site B",
         node="site_b",
         capacity=DEMO_SITE_CAPACITY,
-        location=(-118.2914, 34.0128),
+        location=NODE_LOCATIONS["site_b"],
         estimated_setup_cost=470_000,
         accessible_entrance=True,
     ),
     CandidateSite(
         id="site_c",
+        facility_id="facility_c",
         name="Site C",
         node="site_c",
         capacity=DEMO_SITE_CAPACITY,
-        location=(-118.2820, 34.0080),
+        location=NODE_LOCATIONS["site_c"],
         estimated_setup_cost=390_000,
         accessible_entrance=True,
     ),

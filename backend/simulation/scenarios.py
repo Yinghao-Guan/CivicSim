@@ -17,6 +17,9 @@ from simulation.routing import Route, Unreachable, route_agent
 #: Reported for an agent with a valid route that exceeds the access threshold.
 REASON_TIME_LIMIT = "time_limit"
 
+#: Canonical id of the current-state scenario (docs/03-api-contract.md s.3.2).
+BASELINE_SCENARIO_ID = "baseline"
+
 
 @dataclass(frozen=True)
 class CandidateSite:
@@ -28,6 +31,7 @@ class CandidateSite:
     """
 
     id: str
+    facility_id: str
     name: str
     node: Hashable
     capacity: int
@@ -41,7 +45,7 @@ class ScenarioResult:
     """Outcome of placing a cooling center at one candidate site."""
 
     scenario_id: str
-    selected_site: str
+    selected_site: str | None
     metrics: Metrics
     routes: tuple[Route, ...]
     unreachable: tuple[Unreachable, ...]
@@ -51,17 +55,7 @@ def evaluate_scenario(
     graph: nx.Graph, cohort: Sequence[Agent], site: CandidateSite
 ) -> ScenarioResult:
     """Route every agent to `site` and aggregate the result."""
-    reached: list[tuple[Agent, Route]] = []
-    unreachable: list[Unreachable] = []
-
-    for agent in cohort:
-        outcome = route_agent(graph, agent, site.node)
-        if isinstance(outcome, Unreachable):
-            unreachable.append(outcome)
-        elif outcome.travel_time <= REACH_THRESHOLD_MINUTES:
-            reached.append((agent, outcome))
-        else:
-            unreachable.append(_past_the_threshold(agent, outcome))
+    reached, unreachable = _route_cohort(graph, cohort, site.node)
 
     return ScenarioResult(
         scenario_id=site.id,
@@ -70,6 +64,45 @@ def evaluate_scenario(
         routes=tuple(route for _, route in reached),
         unreachable=tuple(unreachable),
     )
+
+
+def evaluate_baseline(
+    graph: nx.Graph, cohort: Sequence[Agent], destination: Hashable
+) -> ScenarioResult:
+    """Score current-state access, before any new cooling center is added.
+
+    Runs the same routing and metric pipeline as a proposal. `destination` is
+    the cooling resource residents already have. No capacity applies, so
+    `capacity_utilization` is null, as the contract allows for a baseline.
+    """
+    reached, unreachable = _route_cohort(graph, cohort, destination)
+
+    return ScenarioResult(
+        scenario_id=BASELINE_SCENARIO_ID,
+        selected_site=None,
+        metrics=aggregate_metrics(cohort, reached, capacity=None),
+        routes=tuple(route for _, route in reached),
+        unreachable=tuple(unreachable),
+    )
+
+
+def _route_cohort(
+    graph: nx.Graph, cohort: Sequence[Agent], destination: Hashable
+) -> tuple[list[tuple[Agent, Route]], list[Unreachable]]:
+    """Route every agent, splitting them by whether they arrive in time."""
+    reached: list[tuple[Agent, Route]] = []
+    unreachable: list[Unreachable] = []
+
+    for agent in cohort:
+        outcome = route_agent(graph, agent, destination)
+        if isinstance(outcome, Unreachable):
+            unreachable.append(outcome)
+        elif outcome.travel_time <= REACH_THRESHOLD_MINUTES:
+            reached.append((agent, outcome))
+        else:
+            unreachable.append(_past_the_threshold(agent, outcome))
+
+    return reached, unreachable
 
 
 def compare_scenarios(
