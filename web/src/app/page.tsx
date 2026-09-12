@@ -1,5 +1,5 @@
-import CivicSimApp from "@/components/CivicSimApp";
+import HeroScreen from "@/components/hero/HeroScreen";
 
 export default function Home() {
-  return <CivicSimApp />;
+  return <HeroScreen />;
 }

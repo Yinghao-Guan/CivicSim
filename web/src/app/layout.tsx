@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+
+import ExperienceShell from "@/components/experience/ExperienceShell";
+import { ExperienceProvider } from "@/components/experience/ExperienceProvider";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,7 +24,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <ExperienceProvider>
+          <ExperienceShell>{children}</ExperienceShell>
+        </ExperienceProvider>
+      </body>
     </html>
   );
 }
