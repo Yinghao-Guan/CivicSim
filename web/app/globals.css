@@ -298,3 +298,134 @@ body {
   line-height: 1.5;
   color: var(--ink-faint);
 }
+
+/* ---- Scenario panel ---------------------------------------------------- */
+
+.panel--scenario {
+  right: auto;
+  left: 12px;
+  width: 268px;
+}
+
+.panel-error {
+  margin: 11px 0 0;
+  padding: 6px 9px;
+  border: 1px solid var(--heat);
+  border-radius: 4px;
+  background: rgb(226 98 47 / 14%);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.panel-action {
+  width: 100%;
+  margin-top: 12px;
+  padding: 7px 10px;
+  border: 1px solid var(--chrome-border);
+  border-radius: 5px;
+  background: none;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.panel-action:hover:not(:disabled) {
+  border-color: var(--simulation);
+  color: var(--simulation);
+}
+
+.panel-action:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.scenario-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.scenario-choices button {
+  flex: 1 1 auto;
+  padding: 5px 8px;
+  border: 1px solid var(--chrome-border);
+  border-radius: 4px;
+  background: none;
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.scenario-choices button:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.scenario-choices button.is-active {
+  border-color: var(--simulation);
+  color: var(--simulation);
+}
+
+.scenario-choices button:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.compare {
+  margin-top: 14px;
+  padding-top: 11px;
+  border-top: 1px solid var(--chrome-border);
+}
+
+.compare h3 {
+  margin: 0 0 7px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.compare table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.compare th,
+.compare td {
+  padding: 3px 0;
+  text-align: right;
+  font-weight: 400;
+  color: var(--ink-muted);
+}
+
+.compare thead th {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.compare tbody th,
+.compare thead th:first-child {
+  text-align: left;
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+
+.compare-lead {
+  color: var(--simulation);
+  font-weight: 600;
+}
+
+.compare-note {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}

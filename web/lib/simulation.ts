@@ -7,9 +7,10 @@
  * agents and routes float on top of the extruded buildings instead of passing
  * behind them, and the 2.5D city stops reading as a city.
  *
- * M4 adds no real data. It attaches the overlay and draws a probe whose only
- * job is to prove occlusion works in this MapLibre/deck.gl version pair
- * (doc 05 §9). Real agents, routes and heat come in later milestones.
+ * M4 attached the overlay and drew a probe to prove occlusion works in this
+ * MapLibre/deck.gl version pair (doc 05 §9). The probe is still here as the
+ * known-good reference, but the overlay now carries real data: every route
+ * below is a journey the FastAPI backend actually routed.
  */
 
 import { MapboxOverlay } from "@deck.gl/mapbox";
@@ -17,6 +18,12 @@ import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { Map as MapLibreMap } from "maplibre-gl";
 
+import type {
+  AgentRoute,
+  CandidateSite,
+  Coordinate,
+  UnreachableAgent,
+} from "./contract";
 import { VENUE } from "./demoArea.generated";
 import { palette } from "./palette";
 
@@ -93,6 +100,94 @@ export function occlusionProbeLayers(): Layer[] {
       getRadius: 12,
       radiusMinPixels: 4,
       stroked: false,
+    }),
+  ];
+}
+
+/**
+ * What the overlay draws for one scenario.
+ *
+ * All of it comes from a backend response. Nothing here derives a metric or
+ * re-runs any part of the simulation: `routes` are the paths the backend
+ * routed, and `unreachable` are the agents it could not get there.
+ */
+export interface ScenarioScene {
+  routes: AgentRoute[];
+  unreachable: UnreachableAgent[];
+  candidates: CandidateSite[];
+  selectedSiteId: string | null;
+}
+
+/** Mobility-constrained journeys are drawn apart: they carry the equity story. */
+function routeColor(route: AgentRoute): [number, number, number, number] {
+  return route.profile === "mobility_constrained"
+    ? rgba(palette.intervention, 235)
+    : rgba(palette.simulation, 200);
+}
+
+export function scenarioLayers(scene: ScenarioScene): Layer[] {
+  const { routes, unreachable, candidates, selectedSiteId } = scene;
+  const origins = routes
+    .map((route) => ({ route, position: route.path[0] }))
+    .filter((d): d is { route: AgentRoute; position: Coordinate } => Boolean(d.position));
+
+  return [
+    new PathLayer<AgentRoute>({
+      id: "scenario-routes",
+      data: routes,
+      getPath: (d) => d.path,
+      getColor: routeColor,
+      getWidth: 5,
+      widthMinPixels: 2,
+      widthMaxPixels: 8,
+      capRounded: true,
+      jointRounded: true,
+      pickable: true,
+    }),
+    // Where each reached resident started.
+    new ScatterplotLayer<{ route: AgentRoute; position: Coordinate }>({
+      id: "scenario-origins",
+      data: origins,
+      getPosition: (d) => d.position,
+      getFillColor: (d) => routeColor(d.route),
+      getRadius: 9,
+      radiusMinPixels: 3,
+      radiusMaxPixels: 9,
+      stroked: false,
+      pickable: true,
+    }),
+    // Residents who could not reach the site. Kept visible on purpose: they
+    // are the point of the equity reveal, not noise to hide (doc 01 §11.3).
+    new ScatterplotLayer<UnreachableAgent>({
+      id: "scenario-unreachable",
+      data: unreachable,
+      getPosition: (d) => d.origin,
+      getFillColor: rgba(palette.heat, 210),
+      getRadius: 9,
+      radiusMinPixels: 3,
+      radiusMaxPixels: 9,
+      stroked: false,
+      pickable: true,
+    }),
+    new ScatterplotLayer<CandidateSite>({
+      id: "scenario-candidates",
+      data: candidates,
+      getPosition: (d) => d.location,
+      getFillColor: (d) =>
+        d.id === selectedSiteId
+          ? rgba(palette.intervention, 255)
+          : rgba(palette.facility, 190),
+      getRadius: (d) => (d.id === selectedSiteId ? 26 : 16),
+      radiusMinPixels: 6,
+      radiusMaxPixels: 26,
+      stroked: true,
+      getLineColor: rgba(palette.ink, 230),
+      lineWidthMinPixels: 1.5,
+      pickable: true,
+      updateTriggers: {
+        getFillColor: [selectedSiteId],
+        getRadius: [selectedSiteId],
+      },
     }),
   ];
 }

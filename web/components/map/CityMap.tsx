@@ -16,6 +16,7 @@ import maplibregl, { type Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import BuildingPanel from "@/components/panels/BuildingPanel";
+import ScenarioPanel from "@/components/panels/ScenarioPanel";
 import {
   CAMERA,
   MAX_PIXEL_RATIO,
@@ -26,7 +27,14 @@ import {
 } from "@/lib/map";
 import { BUILDING_COUNT, DEMO_AREA_BOUNDS } from "@/lib/demoArea.generated";
 import { buildContextStyle } from "@/lib/mapStyle";
-import { attachSimulationOverlay } from "@/lib/simulation";
+import {
+  SHOW_OCCLUSION_PROBE,
+  attachSimulationOverlay,
+  occlusionProbeLayers,
+  scenarioLayers,
+} from "@/lib/simulation";
+import { useScenarios } from "@/lib/useScenarios";
+import type { MapboxOverlay } from "@deck.gl/mapbox";
 
 import { useSliceInteraction } from "./useSliceInteraction";
 
@@ -44,6 +52,9 @@ export default function CityMap({ onReady }: CityMapProps) {
   const { selected, clearSelection, attach } = useSliceInteraction();
   const attachRef = useRef(attach);
   attachRef.current = attach;
+  const overlayRef = useRef<MapboxOverlay | null>(null);
+  const scenarios = useScenarios();
+  const { active, candidates, activeId } = scenarios;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -85,12 +96,34 @@ export default function CityMap({ onReady }: CityMapProps) {
     let detachSlice: (() => void) | undefined;
     let detachOverlay: (() => void) | undefined;
 
+    // MapLibre measures its container once, at construction, and afterwards
+    // only listens for *window* resizes. When the first paint beats layout the
+    // container is still 0×0, so the canvas is left at MapLibre's 400×300
+    // fallback: the map draws into one corner, routes land off-screen, and the
+    // initial render never completes — which means `load` never fires either,
+    // so this cannot be deferred until then. Watch the container itself.
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      if (!entry || entry.contentRect.width === 0) return;
+      try {
+        map.resize();
+      } catch (cause) {
+        // Harmless mid-initialisation; the next observation corrects it.
+        console.debug("[CityMap] resize before the map was ready", cause);
+      }
+    });
+    resizeObserver.observe(containerRef.current);
+
     map.once("load", () => {
       addSliceLayers(map);
       addVenueMarker(map);
       // After the slice, so the overlay's interleaved layers are composited
       // against buildings that already exist.
-      detachOverlay = attachSimulationOverlay(map).detach;
+      const overlay = attachSimulationOverlay(map);
+      overlayRef.current = overlay.overlay;
+      detachOverlay = () => {
+        overlayRef.current = null;
+        overlay.detach();
+      };
       detachSlice = attachRef.current(map);
       // Re-frame now that the container has its final size; the constructor
       // fit runs before layout settles on a first paint.
@@ -108,6 +141,7 @@ export default function CityMap({ onReady }: CityMapProps) {
     return () => {
       detachSlice?.();
       detachOverlay?.();
+      resizeObserver.disconnect();
       map.off("sourcedata", onSourceData);
       // Clear the ref *before* removing. React StrictMode unmounts and
       // remounts within the same tick in development, and MapLibre 5 throws
@@ -125,6 +159,30 @@ export default function CityMap({ onReady }: CityMapProps) {
     // re-creating it on every parent render would be wasteful and flickery.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Push the current scenario into the overlay. `setProps` updates the
+  // underlying Deck instance in place, so the map is never rebuilt when the
+  // user switches sites.
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    if (!overlay || !ready) return;
+
+    if (!active) {
+      overlay.setProps({
+        layers: SHOW_OCCLUSION_PROBE ? occlusionProbeLayers() : [],
+      });
+      return;
+    }
+
+    overlay.setProps({
+      layers: scenarioLayers({
+        routes: active.routes,
+        unreachable: active.unreachable_agents,
+        candidates,
+        selectedSiteId: active.selected_site,
+      }),
+    });
+  }, [active, candidates, activeId, ready]);
 
   return (
     <div className="map-root">
@@ -144,6 +202,7 @@ export default function CityMap({ onReady }: CityMapProps) {
           context is affected.
         </div>
       )}
+      <ScenarioPanel {...scenarios} />
       {selected && <BuildingPanel building={selected} onClose={clearSelection} />}
       <button
         type="button"
