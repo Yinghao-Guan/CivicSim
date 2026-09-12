@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import type { NearestCooling } from "@/lib/cooling";
 import type { AgentRoute, CandidateSite, Coordinate, HeatmapPoint, SimulationResponse, UnreachableAgent } from "@/lib/contract";
 import { DEMO_AREA_BOUNDS, VENUE } from "@/lib/demoArea.generated";
-import { MAX_PIXEL_RATIO } from "@/lib/map";
+import { MAX_PIXEL_RATIO, SLICE_SOURCE } from "@/lib/map";
 import { buildContextStyle } from "@/lib/mapStyle";
 import { SLICE_LAYER_ID, STUDIO_COLORS, addHeatField, addStudioSlice, boundsOf, paintCandidates, restyleContext } from "@/lib/studio-map";
 
@@ -122,6 +122,7 @@ export default function StudioMap({ stage, candidates, heatmap, scenario, focusS
   const markers = useRef<Map<string, Marker>>(new Map());
   const selectRef = useRef(onSelectSite);
   const pickRef = useRef(onPickLocation);
+  const pickedBuilding = useRef<string | number | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => { selectRef.current = onSelectSite; }, [onSelectSite]);
@@ -140,6 +141,7 @@ export default function StudioMap({ stage, candidates, heatmap, scenario, focusS
       pixelRatio: Math.min(window.devicePixelRatio ?? 1, MAX_PIXEL_RATIO),
     });
     mapRef.current = map;
+    if (process.env.NODE_ENV !== "production") Object.assign(window, { studioMap: map });
     const resize = new ResizeObserver(() => { try { map.resize(); } catch { /* not ready yet */ } });
     resize.observe(container.current);
     const siteMarkers = markers.current;
@@ -154,7 +156,13 @@ export default function StudioMap({ stage, candidates, heatmap, scenario, focusS
       restyleContext(map);
       addStudioSlice(map);
       // Any building in the slice can stand in for "where I am".
-      map.on("click", SLICE_LAYER_ID, (event) => pickRef.current([event.lngLat.lng, event.lngLat.lat]));
+      map.on("click", SLICE_LAYER_ID, (event) => {
+        const id = event.features?.[0]?.id;
+        if (pickedBuilding.current !== null) map.setFeatureState({ source: SLICE_SOURCE, id: pickedBuilding.current }, { picked: false });
+        if (id !== undefined) map.setFeatureState({ source: SLICE_SOURCE, id }, { picked: true });
+        pickedBuilding.current = id ?? null;
+        pickRef.current([event.lngLat.lng, event.lngLat.lat]);
+      });
       map.on("mouseenter", SLICE_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", SLICE_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
       const overlay = new MapboxOverlay({ interleaved: true, layers: [] });
@@ -240,12 +248,24 @@ export default function StudioMap({ stage, candidates, heatmap, scenario, focusS
     return () => cancelAnimationFrame(frame);
   }, [lens, nearby, ready, reducedMotion, scenario, stage]);
 
-  // Bring a clicked building and its walks into view.
+  // Bring a clicked building and its walks into view without turning or tilting the camera.
   useEffect(() => {
     const map = mapRef.current;
-    if (!ready || !map || !nearby?.places.length) return;
+    if (!ready || !map) return;
+    if (!nearby) {
+      if (pickedBuilding.current !== null) map.setFeatureState({ source: SLICE_SOURCE, id: pickedBuilding.current }, { picked: false });
+      pickedBuilding.current = null;
+      return;
+    }
+    if (!nearby.places.length) return;
     const points = nearby.places.flatMap((place) => place.path);
-    map.fitBounds(boundsOf(points), { padding: { ...PANEL_PADDING, right: 380 }, maxZoom: 16.2, duration: reducedMotion ? 0 : 1400 });
+    map.fitBounds(boundsOf(points), {
+      padding: { ...PANEL_PADDING, right: 380 },
+      maxZoom: map.getZoom(),
+      bearing: map.getBearing(),
+      pitch: map.getPitch(),
+      duration: reducedMotion ? 0 : 1400,
+    });
   }, [nearby, ready, reducedMotion]);
 
   // MapLibre sets `position: relative` on its container, so the sized box is a wrapper.

@@ -22,6 +22,7 @@ export const STUDIO_COLORS = {
   candidate: "#f0b3a1",
   venue: "#3a3934",
   cooling: "#7fa6d8",
+  picked: "#23221f",
 } as const;
 
 /** The venue's building carries this OSM name in the slice. */
@@ -85,6 +86,8 @@ export function sliceColor(candidateNames: string[], focusName: string | null): 
   const facility: ExpressionSpecification = ["coalesce", ["get", "facility_name"], "\u0000"];
   return [
     "case",
+    // The building a resident clicked as "where I am" outranks every other role.
+    ["boolean", ["feature-state", "picked"], false], STUDIO_COLORS.picked,
     ["==", ["coalesce", ["get", "name"], ""], VENUE_BUILDING_NAME], STUDIO_COLORS.venue,
     ["==", facility, focusName ?? "\u0001"], STUDIO_COLORS.vermilion,
     ["in", facility, ["literal", candidateNames]], STUDIO_COLORS.candidate,
