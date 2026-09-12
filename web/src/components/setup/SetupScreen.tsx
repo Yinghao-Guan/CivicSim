@@ -50,7 +50,22 @@ export default function SetupScreen() {
       </header>
 
       <section className="briefing-panel">
-        <div className="step-progress">{[1, 2, 3].map((step) => <i className={step <= state.setupStep ? "active" : ""} key={step} />)}</div>
+        <div className="step-progress" aria-label="Scenario progress">
+          {(["Challenge", "Priority", "Sites"] as const).map((label, index) => {
+            const step = (index + 1) as 1 | 2 | 3;
+            return (
+              <button
+                className={step === state.setupStep ? "current" : step < state.setupStep ? "complete" : ""}
+                disabled={step > state.setupStep}
+                onClick={() => state.setSetupStep(step)}
+                key={label}
+              >
+                <i />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </div>
         <AnimatePresence mode="wait">
           {state.setupStep === 1 && (
             <motion.div className="setup-step" key="challenge" initial={{ opacity: 0, x: 28 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }}>
