@@ -39,6 +39,8 @@ export interface ScenarioState {
   runError: string | null;
   select: (scenarioId: string) => void;
   runAllCandidates: () => void;
+  /** Re-run a site with an intervention applied, and show the result. */
+  runIntervention: (siteId: string, shadeSegments: readonly string[]) => void;
   retry: () => void;
 }
 
@@ -89,11 +91,17 @@ export function useScenarios(): ScenarioState {
   }, [loadBaseline]);
 
   const run = useCallback(
-    async (siteId: string): Promise<SimulationResponse | null> => {
+    async (
+      siteId: string,
+      shadeSegments: readonly string[] = [],
+    ): Promise<SimulationResponse | null> => {
       setRunning(siteId);
       setRunError(null);
       try {
-        const result = await simulate({ cooling_center: siteId });
+        const result = await simulate({
+          cooling_center: siteId,
+          shade_segments: [...shadeSegments],
+        });
         if (!alive.current) return null;
         setResults((prior) => ({ ...prior, [result.scenario_id]: result }));
         return result;
@@ -114,6 +122,24 @@ export function useScenarios(): ScenarioState {
       void run(scenarioId);
     },
     [results, run],
+  );
+
+  /**
+   * Apply an intervention and show the result.
+   *
+   * The backend decides the scenario id for an edited run, so the result is
+   * selected by whatever id comes back rather than one guessed here. The
+   * unedited scenario stays in `results` alongside it, which is what lets the
+   * panel show a real before and after.
+   */
+  const runIntervention = useCallback(
+    (siteId: string, shadeSegments: readonly string[]) => {
+      void (async () => {
+        const result = await run(siteId, shadeSegments);
+        if (result && alive.current) setActiveId(result.scenario_id);
+      })();
+    },
+    [run],
   );
 
   /** Runs every candidate so the comparison table can be read at a glance. */
@@ -138,6 +164,7 @@ export function useScenarios(): ScenarioState {
     runError,
     select,
     runAllCandidates,
+    runIntervention,
     retry: () => void loadBaseline(),
   };
 }

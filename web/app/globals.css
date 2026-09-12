@@ -245,6 +245,9 @@ body {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--ink-faint);
+  /* Scenario ids grow with the interventions applied; wrap rather than
+     stretching the panel into a horizontal scrollbar. */
+  overflow-wrap: anywhere;
 }
 
 .panel-badge {
@@ -428,5 +431,82 @@ body {
   margin: 8px 0 0;
   font-size: 10.5px;
   line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+/* ---- Resident edit (intervention) -------------------------------------- */
+
+.panel-action--edit {
+  border-color: var(--intervention);
+  color: var(--intervention);
+}
+
+.panel-action--edit:hover:not(:disabled) {
+  background: rgb(63 158 99 / 14%);
+}
+
+.edit {
+  margin-top: 13px;
+  padding: 10px 11px 11px;
+  border: 1px solid var(--intervention);
+  border-radius: 5px;
+  background: rgb(63 158 99 / 12%);
+}
+
+.edit-flag {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--intervention);
+}
+
+.edit-delta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
+  margin: 7px 0 0;
+}
+
+.edit-was {
+  font-size: 13px;
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+
+.edit-arrow {
+  color: var(--ink-faint);
+}
+
+.edit-now {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.edit-drop {
+  font-size: 11px;
+  color: var(--intervention);
+}
+
+.edit-note {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.edit .panel-action {
+  margin-top: 10px;
+}
+
+.edit-assumption {
+  margin: 7px 0 0;
+  padding-top: 7px;
+  border-top: 1px solid rgb(63 158 99 / 35%);
+  font-size: 10px;
+  line-height: 1.45;
   color: var(--ink-faint);
 }

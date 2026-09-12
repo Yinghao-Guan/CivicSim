@@ -17,10 +17,12 @@ from api.store import ScenarioStore, derive_scenario_id
 from data.demo_neighborhood import (
     BASELINE_DESTINATION,
     CANDIDATE_SITES,
+    SHADEABLE_EDGE_IDS,
     build_demo_cohort,
     build_demo_graph,
     site,
 )
+from simulation.interventions import apply_shade
 from simulation.scenarios import (
     BASELINE_SCENARIO_ID,
     evaluate_baseline,
@@ -30,9 +32,9 @@ from simulation.scenarios import (
 #: The frontend origin during local development (contract section 1).
 FRONTEND_ORIGIN = "http://localhost:3000"
 
-#: Shade is accepted by the schema but not yet modeled. Until the shade task
-#: lands, a request carrying segments is rejected rather than quietly ignored.
-SHADE_SUPPORTED = False
+#: Segments a request may shade. A small allow-list: an unrecognised id would
+#: otherwise change nothing while the response still looked successful.
+SUPPORTED_SHADE_SEGMENTS = SHADEABLE_EDGE_IDS
 
 
 @asynccontextmanager
@@ -85,15 +87,21 @@ def get_baseline() -> BaselineResponse:
 def simulate(request: SimulateRequest) -> ScenarioResponse:
     """Run the simulation for one candidate cooling center."""
     candidate = _resolve_site(request.cooling_center)
-    _reject_unsupported_interventions(request.shade_segments)
+    segments = _validated_shade_segments(request.shade_segments)
+    scenario_id = derive_scenario_id(candidate.id, segments)
 
-    result = evaluate_scenario(app.state.graph, app.state.cohort, candidate)
+    # Interventions run against a per-request graph. The loaded graph is never
+    # edited, so the canonical results computed at startup stay valid.
+    graph = apply_shade(app.state.graph, segments) if segments else app.state.graph
 
-    scenario_id = derive_scenario_id(candidate.id, request.shade_segments)
+    result = evaluate_scenario(
+        graph, app.state.cohort, candidate, scenario_id=scenario_id
+    )
+
     if not app.state.store.is_canonical(scenario_id):
         app.state.store.put(scenario_id, result)
 
-    return to_scenario_response(result, request.shade_segments)
+    return to_scenario_response(result, segments)
 
 
 @app.get("/scenario/{scenario_id}", response_model=ScenarioResponse)
@@ -122,16 +130,23 @@ def _resolve_site(cooling_center: str):
         ) from exc
 
 
-def _reject_unsupported_interventions(shade_segments: list[str]) -> None:
-    """Fail loudly rather than return results that ignore the request."""
-    if shade_segments and not SHADE_SUPPORTED:
+def _validated_shade_segments(shade_segments: list[str]) -> tuple[str, ...]:
+    """The segments to shade, deduplicated and ordered.
+
+    Rejects anything outside the supported set: accepting an id the demo graph
+    does not carry would return a result that silently ignored the request.
+    """
+    unknown = sorted(set(shade_segments) - SUPPORTED_SHADE_SEGMENTS)
+    if unknown:
+        supported = ", ".join(sorted(SUPPORTED_SHADE_SEGMENTS))
         raise HTTPException(
             status_code=400,
             detail={
                 "code": "invalid_scenario",
                 "message": (
-                    "Shade interventions are not modeled yet; "
-                    "shade_segments must be empty."
+                    f"Unsupported shade segment(s): {', '.join(unknown)}. "
+                    f"This demo can shade: {supported}."
                 ),
             },
         )
+    return tuple(sorted(set(shade_segments)))

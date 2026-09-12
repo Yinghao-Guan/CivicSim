@@ -9,6 +9,10 @@
  */
 
 import type { SimulationResponse } from "@/lib/contract";
+import {
+  SHADE_SITE_ID,
+  SITE_B_APPROACH_SEGMENTS,
+} from "@/lib/interventions";
 import { BASELINE_ID, type ScenarioState } from "@/lib/useScenarios";
 
 const integer = new Intl.NumberFormat("en-US");
@@ -59,9 +63,75 @@ function Metrics({ scenario }: { scenario: SimulationResponse }) {
   );
 }
 
+/**
+ * What the user's own edit changed.
+ *
+ * `before` is the unedited run of the same site, still in the cache; `after` is
+ * the edited one. Both came from the backend, so the delta is a subtraction of
+ * two simulated values, not an estimate of what shade "should" do.
+ */
+function EditedProposal({
+  before,
+  after,
+  onRevert,
+}: {
+  before: SimulationResponse | undefined;
+  after: SimulationResponse;
+  onRevert: () => void;
+}) {
+  const beforeHeat = before?.metrics.average_heat_exposure;
+  const afterHeat = after.metrics.average_heat_exposure;
+  const drop =
+    beforeHeat !== undefined && beforeHeat > 0
+      ? (beforeHeat - afterHeat) / beforeHeat
+      : null;
+
+  // What the backend said about *this* run and not the unedited one: the
+  // assumption behind the number above, in the backend's own words rather
+  // than a copy of them kept in sync by hand.
+  const editWarnings = before
+    ? after.warnings.filter((w) => !before.warnings.includes(w))
+    : [];
+
+  return (
+    <div className="edit">
+      <p className="edit-flag">
+        Your edit · {after.interventions.shade_segments.length} shaded segments
+      </p>
+      {beforeHeat !== undefined && (
+        <p className="edit-delta">
+          <span className="edit-was">{minutes(beforeHeat)}</span>
+          <span className="edit-arrow">→</span>
+          <span className="edit-now">{minutes(afterHeat)}</span>
+          {drop !== null && (
+            <span className="edit-drop">{share.format(drop)} less heat</span>
+          )}
+        </p>
+      )}
+      <p className="edit-note">
+        Re-simulated over the shaded streets. Travel times are unchanged, so the
+        same residents walk the same routes — in less sun.
+      </p>
+      {editWarnings.map((warning) => (
+        <p key={warning} className="edit-assumption">
+          {warning}
+        </p>
+      ))}
+      <button type="button" className="panel-action" onClick={onRevert}>
+        Remove shade
+      </button>
+    </div>
+  );
+}
+
 /** Side-by-side once more than one scenario has been run. */
 function Comparison({ results }: { results: Record<string, SimulationResponse> }) {
-  const runs = Object.values(results).filter((r) => r.selected_site !== null);
+  // Canonical runs only: an edited run shares its site's name, so including it
+  // would list the same site twice with no way to tell the rows apart. The
+  // edit gets its own before/after panel instead.
+  const runs = Object.values(results).filter(
+    (r) => r.selected_site !== null && r.scenario_id === r.selected_site,
+  );
   if (runs.length < 2) return null;
 
   const best = (pick: (r: SimulationResponse) => number) =>
@@ -120,8 +190,13 @@ export default function ScenarioPanel(state: ScenarioState) {
     runError,
     select,
     runAllCandidates,
+    runIntervention,
     retry,
   } = state;
+
+  const edited = (active?.interventions.shade_segments.length ?? 0) > 0;
+  const canShade =
+    active !== null && !edited && active.selected_site === SHADE_SITE_ID;
 
   if (load === "loading") {
     return (
@@ -154,7 +229,7 @@ export default function ScenarioPanel(state: ScenarioState) {
     <aside className="panel panel--scenario" aria-label="Simulation">
       <header className="panel-head">
         <div>
-          <h2>Cooling center</h2>
+          <h2>{edited ? "Site B + shade" : "Cooling center"}</h2>
           <p className="panel-id">
             {active ? active.scenario_id : "—"} · {active?.run.model_version}
           </p>
@@ -193,6 +268,27 @@ export default function ScenarioPanel(state: ScenarioState) {
             </p>
           )}
           <Metrics scenario={active} />
+
+          {edited && (
+            <EditedProposal
+              before={active.selected_site ? results[active.selected_site] : undefined}
+              after={active}
+              onRevert={() => select(SHADE_SITE_ID)}
+            />
+          )}
+
+          {canShade && (
+            <button
+              type="button"
+              className="panel-action panel-action--edit"
+              disabled={running !== null}
+              onClick={() =>
+                runIntervention(SHADE_SITE_ID, SITE_B_APPROACH_SEGMENTS)
+              }
+            >
+              {running ? "Simulating…" : "Add shade to approach"}
+            </button>
+          )}
         </>
       ) : (
         <p className="panel-id">Running…</p>

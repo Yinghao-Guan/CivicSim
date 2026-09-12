@@ -16,6 +16,7 @@ from api.schemas import (
     UnreachableAgentModel,
 )
 from data.demo_neighborhood import MODEL_VERSION, POPULATION_VERSION, location
+from simulation.interventions import SHADE_HEAT_REDUCTION
 from simulation.metrics import Metrics
 from simulation.scenarios import CandidateSite, ScenarioResult
 
@@ -35,11 +36,29 @@ STANDING_WARNINGS: tuple[str, ...] = (
 )
 
 
+def shade_assumption(segment_count: int) -> str:
+    """State the shade model in the response, in the reader's own units.
+
+    Derived from the constant the simulation actually applied, so the sentence
+    cannot drift away from the number that produced the metrics.
+    """
+    percent = round(SHADE_HEAT_REDUCTION * 100)
+    return (
+        f"Modeled shade removes {percent}% of unshaded heat exposure on the "
+        f"{segment_count} edited segment(s). A demo assumption about mature "
+        "street trees, not a measurement."
+    )
+
+
 def to_scenario_response(
     result: ScenarioResult, shade_segments: Sequence[str] = ()
 ) -> ScenarioResponse:
     """Render one scenario result in the contract's response shape."""
     routes = [_route(route) for route in result.routes]
+    warnings = list(STANDING_WARNINGS)
+    if shade_segments:
+        # First, so a reader meets the assumption before the standing caveats.
+        warnings.insert(0, shade_assumption(len(shade_segments)))
 
     return ScenarioResponse(
         scenario_id=result.scenario_id,
@@ -56,7 +75,7 @@ def to_scenario_response(
             agent_count=len(result.routes) + len(result.unreachable),
             route_sample_count=len(routes),
         ),
-        warnings=list(STANDING_WARNINGS),
+        warnings=warnings,
     )
 
 

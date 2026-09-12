@@ -198,7 +198,7 @@ def test_every_edge_is_geometrically_possible():
     metres_per_degree_lon = 92_315.0  # at latitude 34
     walking_metres_per_minute = 84.0  # 1.4 m/s
 
-    for u, v, minutes, _accessible, _heat in DEMO_EDGES:
+    for _edge_id, u, v, minutes, _accessible, _heat in DEMO_EDGES:
         (lon_u, lat_u), (lon_v, lat_v) = NODE_LOCATIONS[u], NODE_LOCATIONS[v]
         east_west = (lon_v - lon_u) * metres_per_degree_lon
         north_south = (lat_v - lat_u) * metres_per_degree_lat

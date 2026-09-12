@@ -30,42 +30,68 @@ Site A is a third option with no accessible entrance at all.
 import networkx as nx
 
 from simulation.agents import Agent
-from simulation.routing import ACCESSIBLE_ATTR, HEAT_ATTR, WEIGHT_ATTR
+from simulation.routing import (
+    ACCESSIBLE_ATTR,
+    EDGE_ID_ATTR,
+    HEAT_ATTR,
+    WEIGHT_ATTR,
+)
 from simulation.scenarios import CandidateSite
 
-#: (u, v, travel_time_minutes, wheelchair_accessible, heat_exposure_minutes)
-#: Every edge declares accessibility explicitly - there is no implicit default
-#: in the demo data.
-DEMO_EDGES: tuple[tuple[str, str, float, bool, float], ...] = (
+#: (edge_id, u, v, travel_time_minutes, wheelchair_accessible, heat_exposure)
+#:
+#: Every edge declares accessibility and heat explicitly - there is no implicit
+#: default in the demo data. `edge_id` is the opaque handle the API exposes for
+#: interventions (docs/03-api-contract.md s.3.2); the frontend must not parse it.
+DEMO_EDGES: tuple[tuple[str, str, str, float, bool, float], ...] = (
     # Western residential streets
-    ("res_w1", "j_w", 2.0, True, 1.0),
-    ("res_w2", "j_w", 3.0, True, 1.5),
+    ("edge_01", "res_w1", "j_w", 2.0, True, 1.0),
+    ("edge_02", "res_w2", "j_w", 3.0, True, 1.5),
     # Site B sits on a shaded street just off the western junction
-    ("j_w", "site_b", 3.0, True, 1.0),
+    ("edge_03", "j_w", "site_b", 3.0, True, 1.0),
     # Site A is further out, and its only entrance is up a flight of steps
-    ("j_w", "site_a", 9.0, False, 7.0),
+    ("edge_04", "j_w", "site_a", 9.0, False, 7.0),
     # The middle of the neighborhood connects both ways
-    ("res_mid", "j_w", 4.0, True, 2.0),
-    ("res_mid", "j_c1", 5.0, True, 4.0),
+    ("edge_05", "res_mid", "j_w", 4.0, True, 2.0),
+    ("edge_06", "res_mid", "j_c1", 5.0, True, 4.0),
     # The short east-west link is a stepped pedestrian crossing
-    ("j_c1", "j_e", 3.0, False, 2.5),
+    ("edge_07", "j_c1", "j_e", 3.0, False, 2.5),
     # ... and the accessible alternative is a long detour
-    ("j_c1", "j_bypass", 9.0, True, 8.0),
-    ("j_bypass", "j_e", 2.0, True, 1.5),
+    ("edge_08", "j_c1", "j_bypass", 9.0, True, 8.0),
+    ("edge_09", "j_bypass", "j_e", 2.0, True, 1.5),
     # Eastern residential streets, hotter and less shaded
-    ("res_e1", "j_e", 2.0, True, 1.8),
-    ("res_e2", "j_e", 2.0, True, 1.8),
-    ("res_e3", "j_e", 3.0, True, 2.6),
+    ("edge_10", "res_e1", "j_e", 2.0, True, 1.8),
+    ("edge_11", "res_e2", "j_e", 2.0, True, 1.8),
+    ("edge_12", "res_e3", "j_e", 3.0, True, 2.6),
     # Site C sits beside the eastern junction
-    ("j_e", "site_c", 2.0, True, 1.6),
+    ("edge_13", "j_e", "site_c", 2.0, True, 1.6),
     # The nearest cooling center that exists today sits off in the far western
     # corner of the area. It is the baseline's only destination, and it is a
     # long walk from everyone: nobody reaches it inside the access threshold.
-    ("j_bypass", "existing_center", 14.0, True, 11.0),
+    ("edge_14", "j_bypass", "existing_center", 14.0, True, 11.0),
 )
 
 #: The cooling resource residents have today, before any proposal.
 BASELINE_DESTINATION = "existing_center"
+
+#: Edges a user may shade, keyed by the id the API accepts.
+#:
+#: Deliberately a small allow-list rather than "any edge": the demo supports
+#: one intervention on one approach, and an unvalidated id would otherwise
+#: silently do nothing while the response still looked successful.
+SHADEABLE_EDGE_IDS: frozenset[str] = frozenset(
+    {"edge_01", "edge_02", "edge_03", "edge_05"}
+)
+
+#: The walk to Site B: the two western residential streets, the street in from
+#: the middle of the neighborhood, and the final approach to the door. Shading
+#: these is the "add shade to the approach" proposal.
+SITE_B_APPROACH_SEGMENTS: tuple[str, ...] = (
+    "edge_01",
+    "edge_02",
+    "edge_03",
+    "edge_05",
+)
 
 #: (agent_id, profile, origin, requires_accessible_route, weight, heat_vulnerable)
 DEMO_COHORT: tuple[tuple[str, str, str, bool, float, bool], ...] = (
@@ -184,11 +210,12 @@ CANDIDATE_SITES: tuple[CandidateSite, ...] = (
 def build_demo_graph() -> nx.Graph:
     """The demo walking graph. Deterministic: same edges, same order, always."""
     graph = nx.Graph()
-    for u, v, travel_time, accessible, heat in DEMO_EDGES:
+    for edge_id, u, v, travel_time, accessible, heat in DEMO_EDGES:
         graph.add_edge(
             u,
             v,
             **{
+                EDGE_ID_ATTR: edge_id,
                 WEIGHT_ATTR: travel_time,
                 ACCESSIBLE_ATTR: accessible,
                 HEAT_ATTR: heat,
