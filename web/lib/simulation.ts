@@ -132,14 +132,28 @@ export function scenarioLayers(scene: ScenarioScene): Layer[] {
     .filter((d): d is { route: AgentRoute; position: Coordinate } => Boolean(d.position));
 
   return [
+    // A dark casing under every route. Routes cross a warm, light map and a
+    // grey slice; a single bright stroke loses its edges against both at
+    // presentation distance, so each one gets an outline to sit in.
+    new PathLayer<AgentRoute>({
+      id: "scenario-routes-casing",
+      data: routes,
+      getPath: (d) => d.path,
+      getColor: rgba(palette.chrome, 150),
+      getWidth: 17,
+      widthMinPixels: 8,
+      widthMaxPixels: 26,
+      capRounded: true,
+      jointRounded: true,
+    }),
     new PathLayer<AgentRoute>({
       id: "scenario-routes",
       data: routes,
       getPath: (d) => d.path,
       getColor: routeColor,
-      getWidth: 5,
-      widthMinPixels: 2,
-      widthMaxPixels: 8,
+      getWidth: 11,
+      widthMinPixels: 5,
+      widthMaxPixels: 18,
       capRounded: true,
       jointRounded: true,
       pickable: true,
@@ -150,10 +164,12 @@ export function scenarioLayers(scene: ScenarioScene): Layer[] {
       data: origins,
       getPosition: (d) => d.position,
       getFillColor: (d) => routeColor(d.route),
-      getRadius: 9,
-      radiusMinPixels: 3,
-      radiusMaxPixels: 9,
-      stroked: false,
+      getRadius: 15,
+      radiusMinPixels: 5,
+      radiusMaxPixels: 15,
+      stroked: true,
+      getLineColor: rgba(palette.chrome, 200),
+      lineWidthMinPixels: 1.5,
       pickable: true,
     }),
     // Residents who could not reach the site. Kept visible on purpose: they
@@ -162,12 +178,27 @@ export function scenarioLayers(scene: ScenarioScene): Layer[] {
       id: "scenario-unreachable",
       data: unreachable,
       getPosition: (d) => d.origin,
-      getFillColor: rgba(palette.heat, 210),
-      getRadius: 9,
-      radiusMinPixels: 3,
-      radiusMaxPixels: 9,
-      stroked: false,
+      getFillColor: rgba(palette.heat, 225),
+      getRadius: 15,
+      radiusMinPixels: 5,
+      radiusMaxPixels: 15,
+      stroked: true,
+      getLineColor: rgba(palette.chrome, 200),
+      lineWidthMinPixels: 1.5,
       pickable: true,
+    }),
+    // A halo marking the site under test, so which proposal is on screen is
+    // readable without looking back at the panel.
+    new ScatterplotLayer<CandidateSite>({
+      id: "scenario-selected-halo",
+      data: candidates.filter((site) => site.id === selectedSiteId),
+      getPosition: (d) => d.location,
+      getFillColor: rgba(palette.intervention, 70),
+      getRadius: 110,
+      radiusMinPixels: 20,
+      radiusMaxPixels: 80,
+      stroked: false,
+      updateTriggers: { getPosition: [selectedSiteId] },
     }),
     new ScatterplotLayer<CandidateSite>({
       id: "scenario-candidates",
@@ -176,17 +207,21 @@ export function scenarioLayers(scene: ScenarioScene): Layer[] {
       getFillColor: (d) =>
         d.id === selectedSiteId
           ? rgba(palette.intervention, 255)
-          : rgba(palette.facility, 190),
-      getRadius: (d) => (d.id === selectedSiteId ? 26 : 16),
-      radiusMinPixels: 6,
-      radiusMaxPixels: 26,
+          : rgba(palette.facility, 200),
+      getRadius: (d) => (d.id === selectedSiteId ? 46 : 24),
+      radiusMinPixels: (selectedSiteId ? 11 : 8) as number,
+      radiusMaxPixels: 46,
       stroked: true,
-      getLineColor: rgba(palette.ink, 230),
-      lineWidthMinPixels: 1.5,
+      getLineColor: (d) =>
+        d.id === selectedSiteId ? rgba(palette.ink, 255) : rgba(palette.chrome, 190),
+      getLineWidth: (d) => (d.id === selectedSiteId ? 4 : 2),
+      lineWidthMinPixels: 2,
       pickable: true,
       updateTriggers: {
         getFillColor: [selectedSiteId],
         getRadius: [selectedSiteId],
+        getLineColor: [selectedSiteId],
+        getLineWidth: [selectedSiteId],
       },
     }),
   ];

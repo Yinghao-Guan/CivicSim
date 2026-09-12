@@ -7,6 +7,7 @@
  * (doc 05 section 2).
  */
 
+import { LngLatBounds } from "maplibre-gl";
 import type {
   ExpressionSpecification,
   LngLatBoundsLike,
@@ -56,6 +57,43 @@ export function frameDemoArea(map: MapLibreMap, animate = true): void {
     duration: animate ? 900 : 0,
   });
 }
+
+/**
+ * Frame whatever the active scenario actually covers.
+ *
+ * The demo area is 3 km² but a scenario's routes occupy a fraction of it, so
+ * the default framing leaves them small enough to miss from the back of a
+ * room. Generous padding keeps the surrounding blocks visible, so the routes
+ * still read as journeys through a neighborhood rather than an abstract
+ * diagram, and the zoom is capped so a tight cluster does not fly into the
+ * rooftops.
+ */
+export function frameScenario(
+  map: MapLibreMap,
+  coordinates: [number, number][],
+  animate = true,
+): void {
+  if (coordinates.length === 0) return;
+
+  const bounds = coordinates.reduce(
+    (box, coordinate) => box.extend(coordinate),
+    new LngLatBounds(coordinates[0], coordinates[0]),
+  );
+
+  map.fitBounds(bounds, {
+    pitch: CAMERA.pitch,
+    bearing: CAMERA.bearing,
+    padding: SCENARIO_PADDING,
+    maxZoom: SCENARIO_MAX_ZOOM,
+    duration: animate ? 1100 : 0,
+  });
+}
+
+/** Room around the routes, in pixels. Left is wider to clear the panel. */
+const SCENARIO_PADDING = { top: 90, right: 110, bottom: 110, left: 330 };
+
+/** Close enough to read a route, far enough to keep its context. */
+const SCENARIO_MAX_ZOOM = 16.2;
 
 const VENUE_SOURCE = "venue";
 const VENUE_DOT = "venue-dot";

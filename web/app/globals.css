@@ -144,7 +144,8 @@ body {
 .map-status {
   position: absolute;
   top: 12px;
-  left: 12px;
+  /* Clear of the scenario panel, which owns the top-left corner. */
+  left: 296px;
   z-index: 2;
   max-width: 340px;
   padding: 8px 12px;

@@ -24,6 +24,7 @@ import {
   addSliceLayers,
   addVenueMarker,
   frameDemoArea,
+  frameScenario,
 } from "@/lib/map";
 import { BUILDING_COUNT, DEMO_AREA_BOUNDS } from "@/lib/demoArea.generated";
 import { buildContextStyle } from "@/lib/mapStyle";
@@ -165,7 +166,8 @@ export default function CityMap({ onReady }: CityMapProps) {
   // user switches sites.
   useEffect(() => {
     const overlay = overlayRef.current;
-    if (!overlay || !ready) return;
+    const map = mapRef.current;
+    if (!overlay || !map || !ready) return;
 
     if (!active) {
       overlay.setProps({
@@ -182,6 +184,19 @@ export default function CityMap({ onReady }: CityMapProps) {
         selectedSiteId: active.selected_site,
       }),
     });
+
+    // Fly to what this scenario covers. Only for proposals: the baseline
+    // reaches nobody, so there are no routes to frame and pulling the camera
+    // to a handful of stranded origins would misrepresent it.
+    if (active.selected_site === null) {
+      frameDemoArea(map);
+      return;
+    }
+    const site = candidates.find((c) => c.id === active.selected_site);
+    frameScenario(map, [
+      ...active.routes.flatMap((route) => route.path),
+      ...(site ? [site.location] : []),
+    ]);
   }, [active, candidates, activeId, ready]);
 
   return (

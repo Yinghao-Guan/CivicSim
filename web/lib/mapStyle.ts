@@ -46,11 +46,15 @@ const OFFLINE_MAXZOOM = 14;
  * Serve the basemap from disk instead of the network.
  *
  * Doc 03 §2.3.2's insurance against venue Wi-Fi. Layers 2 and 3 are already
- * local, so with this on the entire demo runs offline. Run
- * `python scripts/build_offline_tiles.py` first -- the package is committed,
- * so normally it is already there.
+ * local, so with this on the entire demo runs offline.
+ *
+ * **On by default.** The committed package covers the demo area at z11-z14,
+ * which is the whole of what the demo shows, and a local file cannot be taken
+ * away by a conference network. Opting out (`NEXT_PUBLIC_OFFLINE_TILES=off`)
+ * gives the full planet basemap for panning beyond the slice while exploring,
+ * at the cost of depending on the network — which is the wrong trade on stage.
  */
-export const OFFLINE_TILES = process.env.NEXT_PUBLIC_OFFLINE_TILES === "on";
+export const OFFLINE_TILES = process.env.NEXT_PUBLIC_OFFLINE_TILES !== "off";
 
 const ATTRIBUTION =
   '<a href="https://openfreemap.org" target="_blank" rel="noreferrer">OpenFreeMap</a> ' +
