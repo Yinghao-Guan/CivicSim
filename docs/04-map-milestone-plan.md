@@ -40,8 +40,9 @@ Resolves all four open items in doc 03 §3.4. Doing this first prevents rework i
 Layout, alongside `web/` (and a later `backend/`):
 
 ```text
-scripts/     preprocessing
-data/        generated artifacts (committed)
+scripts/             preprocessing
+data/.cache/         raw Overpass responses (gitignored)
+web/public/data/     generated artifacts the browser fetches (committed)
 ```
 
 - **Fetch:** Overpass API by bounding box, plain Python + `requests`. Deliberately **no osmium, no GDAL, no tippecanoe** — every team member can run this on macOS and on native Windows alike. Tile-based tooling arrives only if we expand to district scale (§2).
@@ -50,24 +51,24 @@ data/        generated artifacts (committed)
 - **Candidate facilities:** tag plausible sites from OSM (`amenity=community_centre`, `amenity=library`, `leisure=sports_centre`, `amenity=school`). Mark them all; leave `candidate_site` unset until the three official candidate sites are chosen during scenario design.
 - Script is idempotent and prints the output feature count and file size. At slice scale this should be single-digit megabytes — materially more means the bbox is too large.
 
-**Done when:** `data/buildings.geojson` exists, its feature count matches the M0 measurement, and a spot check of several features shows complete attributes. *Results: §4.*
+**Done when:** `web/public/data/buildings.geojson` exists, its feature count matches the M0 measurement, and a spot check of several features shows complete attributes. *Results: §4.*
 
 ---
 
-### M2 — `web/` scaffold and context basemap (layer ①)
+### M2 — `web/` scaffold and context basemap (layer ①) ✅ done 2026-09-12
 
 - Next.js, App Router, TypeScript. Directory shape per doc 02 §8 (`components/map/`, `lib/map.ts`, `lib/types.ts`).
 - MapLibre with OpenFreeMap vector tiles; pitched camera framing the M0 bbox.
 - Map components use `"use client"` and are imported with `dynamic(..., { ssr: false })` (doc 03 §2.3.5). Get this right from the first commit — MapLibre and deck.gl are browser-only and SSR will fail loudly.
 - Tile-provided buildings are extruded for visual context only and are **not** interactive.
 
-**Done when:** `npm run dev` opens on a pitched view of South LA with real roads and context buildings visible.
+**Done when:** `npm run dev` opens on a pitched view of South LA with real roads and context buildings visible. *Results: §5.*
 
 ---
 
 ### M3 — Demo slice, clickable (layer ②)
 
-- `data/buildings.geojson` as a MapLibre `geojson` source rendered with `fill-extrusion`.
+- `web/public/data/buildings.geojson` as a MapLibre `geojson` source rendered with `fill-extrusion`, fetched via `BUILDINGS_URL` from `lib/demoArea.generated.ts`.
 - `promoteId: "building_id"` plus `feature-state` for hover and selection highlighting (doc 03 §2.2).
 - Clicking a building opens a side panel showing its attributes.
 - Palette per doc 02 §6: muted/dark buildings on a warm neutral basemap. A planning tool, not Google Earth.
@@ -98,7 +99,7 @@ May follow M4, but must not be forgotten.
 
 ## 2. Designing for the district-scale expansion
 
-Per doc 03 §4.2, the pressure point at CD 8/9/10 scale is data loading, not the GPU. Keep layer ②'s source behind a thin abstraction in `lib/map.ts` so swapping `geojson` for PMTiles is a local change. The tippecanoe → PMTiles pipeline is the only step that needs POSIX tooling; see §5.
+Per doc 03 §4.2, the pressure point at CD 8/9/10 scale is data loading, not the GPU. Keep layer ②'s source behind a thin abstraction in `lib/map.ts` so swapping `geojson` for PMTiles is a local change. The tippecanoe → PMTiles pipeline is the only step that needs POSIX tooling; see §6.
 
 ---
 
@@ -146,7 +147,7 @@ This box is **50% larger than the 1.5–2 km² doc 03 §3.1 originally specified
 
 *(measured across the full 3.5 × 3.5 km survey area; 95.7% within the chosen box)*
 
-Values are fine-grained decimals — 4.0, 4.2, 3.8, 3.9 m and so on — characteristic of the LA County LARIAC LiDAR import rather than hand-entered estimates. **The §6 risk of a uniform 5 m slab field is retired: OSM is a sufficient building source and no switch to a separate LARIAC dataset is needed.** The fallback chain stays in the M1 script as a safety net, but its `building:levels` step will almost never fire.
+Values are fine-grained decimals — 4.0, 4.2, 3.8, 3.9 m and so on — characteristic of the LA County LARIAC LiDAR import rather than hand-entered estimates. **The §7 risk of a uniform 5 m slab field is retired: OSM is a sufficient building source and no switch to a separate LARIAC dataset is needed.** The fallback chain stays in the M1 script as a safety net, but its `building:levels` step will almost never fire.
 
 Height distribution:
 
@@ -189,7 +190,7 @@ The Alameda rail/industrial corridor lies at roughly `-118.2341`, **2.16 km east
 
 ## 4. M1 results
 
-**Completed 2026-09-12.** `data/buildings.geojson` is built and committed.
+**Completed 2026-09-12.** `web/public/data/buildings.geojson` is built and committed.
 
 Run it with:
 
@@ -209,7 +210,8 @@ python scripts/build_buildings.py
 | `scripts/geometry.py` | Ring assembly, centroid, point-in-polygon, RFC 7946 winding — pure Python |
 | `scripts/build_buildings.py` | The M1 script itself |
 | `scripts/requirements.txt` | `requests` only |
-| `data/buildings.geojson` | Output: 4,887 buildings, 2.93 MB |
+| `web/public/data/buildings.geojson` | Output: 4,887 buildings, 2.93 MB. Lives under `public/` because the browser fetches it directly, and doc 03 §2.3.2 already puts the offline PMTiles there — one copy in the repo, and clone-and-run still works |
+| `web/lib/demoArea.generated.ts` | Generated alongside it, so the bounding box is defined once in `demo_area.py` rather than hand-copied into TypeScript |
 
 ### 4.2 Output
 
@@ -273,19 +275,90 @@ The output is byte-for-byte identical across runs, so re-running produces an emp
 
 ---
 
-## 5. Cross-platform conventions
+## 5. M2 results
+
+**Completed 2026-09-12.** `npm run dev` opens on a pitched 2.5D view of South LA with real roads, extruded context buildings and the venue marked.
+
+```bash
+cd web
+npm install
+npm run dev        # http://localhost:3000
+```
+
+### 5.1 Versions
+
+| Package | Version |
+| --- | --- |
+| Node | 20.12.1 |
+| Next.js | 15.5.25 (App Router, Turbopack) |
+| React | 19.1.0 |
+| MapLibre GL JS | 5.24.0 |
+
+deck.gl is deliberately **not** installed yet. Installing it early would not surface the `interleaved: true` compatibility risk in §6 — only using it does, which is what M4 is for.
+
+### 5.2 Files
+
+| File | Role |
+| --- | --- |
+| `web/lib/palette.ts` | Doc 02 §6's palette as real values, since MapLibre paint properties cannot read CSS variables |
+| `web/lib/mapStyle.ts` | Layer ① — the context basemap style |
+| `web/lib/map.ts` | Camera constants, `frameDemoArea`, the venue annotation |
+| `web/lib/types.ts` | `BuildingProperties`, mirroring what the M1 script writes |
+| `web/lib/api.ts` | FastAPI client seam: base URL, error type, `backendReachable` |
+| `web/components/map/CityMap.tsx` | The MapLibre instance (`"use client"`) |
+| `web/components/map/MapView.tsx` | The `dynamic(..., { ssr: false })` wrapper every page goes through |
+| `web/app/{layout,page}.tsx`, `globals.css` | Shell: header facts, map, milestone footer |
+| `.claude/launch.json` | Dev-server config so the app can be launched and previewed directly |
+
+### 5.3 Decisions
+
+**The basemap style is hand-written, not one of OpenFreeMap's.** Their styles carry 55–111 layers tuned for general-purpose use; recolouring that many layers at runtime to reach doc 02 §6's warm-neutral look would be worse than declaring the dozen layers we actually want. Everything in the style is deliberately recessive, since a general-purpose basemap competes with the simulation rather than sitting under it. It also makes M5's offline swap a one-line source change.
+
+Source of truth: OpenFreeMap's TileJSON at `https://tiles.openfreemap.org/planet` (OpenMapTiles schema, maxzoom 14, source id `openmaptiles`). Its `building` layer carries `render_height`, `render_min_height` and `hide_3d` — exactly what layer ① needs. Fonts are `Noto Sans Regular` / `Noto Sans Bold`.
+
+**No Tailwind.** Doc 02 §21's stack does not list it, and the palette is better expressed as one set of custom properties in `globals.css` mirroring `palette.ts` than as utility classes. Easy to add later if the UI work in M3 argues for it.
+
+**Staying on Next 15.** `npm audit` reports two advisories (one moderate, one high) in the `postcss` version Next 15 bundles; clearing them requires Next 16, a semver-major jump. postcss runs at build time over CSS we author ourselves, so there is no exposure here, and changing major framework versions on hackathon day is the larger risk.
+
+### 5.4 Verified
+
+With the demo area framed:
+
+| Check | Result |
+| --- | --- |
+| Camera | zoom 14.44, pitch 52°, bearing −18°, centred on the bbox |
+| Context buildings rendered | 226 in view, heights 1–39 m |
+| Roads rendered | 747 in view |
+| Venue marker | dot and "The Beehive" label both placed |
+| `map.loaded()` | true |
+| `npm run build` | passes, including type checking and lint |
+
+### 5.5 Three bugs worth recording
+
+1. **The map container collapsed to 0 px tall.** `.map-canvas` was sized with `position: absolute; inset: 0`, but MapLibre adds its own `.maplibregl-map` class to that element and `maplibre-gl.css` sets `position: relative` at equal specificity. Imported after `globals.css`, it won — and `inset` on a relatively positioned box offsets without sizing. Fixed by sizing with `width/height: 100%`, which holds regardless of positioning.
+2. **A throw during teardown could strand a dead map.** MapLibre 5 throws "there is no tile manager with ID …" when a map is removed while its style is still loading, which is what StrictMode's development double-mount does. The throw escaped the cleanup function before `mapRef.current = null` ran, so the remount's guard saw a live ref and skipped creating a map, leaving a dead canvas. Cleanup now clears the ref first and wraps `remove()` in try/catch.
+3. **The venue label lost every label collision.** Basemap labels were winning placement against it, which is backwards for the one annotation that must always be findable. It now sits above the basemap with `text-allow-overlap`.
+
+### 5.6 Two environment notes
+
+- **Do not run `npm run build` while `npm run dev` is running.** They share `web/.next`, and the production build leaves the dev server throwing `ENOENT … _buildManifest.js.tmp`. Stop the dev server, or delete `.next` and restart it.
+- A headless or non-compositing browser never schedules `requestAnimationFrame`, and MapLibre gates its style load on a rAF callback — so the map stays blank with zero layers and no tile requests even though `document.visibilityState` reads `"visible"`. This affects automated checks only, never a real browser tab, but it is a confusing failure mode: the symptom looks like a broken style, and the cause is that no frame is ever scheduled.
+
+---
+
+## 6. Cross-platform conventions
 
 The team mixes macOS and Windows, so the build must work on both without per-machine instructions.
 
 - Preprocessing is Python + `requests` only, versions pinned in `requirements.txt`. Nothing that needs a compiler or a system geospatial library.
 - Scripts use `pathlib`; no hard-coded path separators.
 - `.gitattributes` sets `text=auto eol=lf` so Mac and Windows checkouts don't produce whole-file diffs.
-- **Generated artifacts (`data/buildings.geojson`, PMTiles) are committed.** At a few megabytes this is a good trade: clone-and-run matters more than a pristine repository during a hackathon.
+- **Generated artifacts (`web/public/data/buildings.geojson`, `web/lib/demoArea.generated.ts`, PMTiles) are committed.** At a few megabytes this is a good trade: clone-and-run matters more than a pristine repository during a hackathon.
 - The one POSIX-only step is tippecanoe, needed only for the district expansion. On Windows run it under WSL; on macOS `brew install tippecanoe`.
 
 ---
 
-## 6. Risks
+## 7. Risks
 
 | Risk | Response |
 | --- | --- |
