@@ -1,3 +1,5 @@
+import { HERO_PALETTE } from "@/lib/hero-palette";
+
 const blocks = [
   [-2, -2, .8], [-.9, -2, 1.1], [.4, -2, 1.4], [1.7, -2, .7],
   [-2, -.6, .7], [-.9, -.6, .5], [1.7, -.6, 1.1],
@@ -18,24 +20,26 @@ export default function HeroSceneFallback() {
       <defs>
         <radialGradient id="hero-fallback-fade"><stop stopColor="white" offset=".2" /><stop stopColor="black" offset="1" /></radialGradient>
         <mask id="hero-fallback-mask"><rect width="1280" height="720" fill="url(#hero-fallback-fade)" /></mask>
+        <radialGradient id="hero-fallback-heat"><stop stopColor={HERO_PALETTE.heat.peak} stopOpacity=".3" offset="0" /><stop stopColor={HERO_PALETTE.heat.hot} stopOpacity=".26" offset=".35" /><stop stopColor={HERO_PALETTE.heat.warm} stopOpacity=".18" offset=".7" /><stop stopColor={HERO_PALETTE.heat.mild} stopOpacity="0" offset="1" /></radialGradient>
       </defs>
-      <g fill="none" stroke="#537c87" strokeWidth=".6" opacity=".4" mask="url(#hero-fallback-mask)">
+      <g fill="none" stroke={HERO_PALETTE.grid.line} strokeWidth=".6" opacity=".22" mask="url(#hero-fallback-mask)">
         {Array.from({ length: 25 }, (_, i) => <path key={`r${i}`} d={`M-50 ${240 + i * 23} Q500 ${175 + i * 17} 1330 ${275 + i * 27}`} />)}
         {Array.from({ length: 29 }, (_, i) => <path key={`c${i}`} d={`M${400 + i * 20} 230 Q${i * 56 - 50} 470 ${i * 86 - 500} 740`} />)}
       </g>
-      <g className="hero-fallback-sculpture" transform="translate(940 390)" fill="none" stroke="#a9cbd0" strokeWidth=".9">
-        {[-.1, -.7, -1.15].map((height) => <path key={height} opacity={height < -.2 ? .24 : .7} fill={height === -.1 ? "#091920" : "none"} d={`M${project(-3, height, -3)} L${project(3, height, -3)} L${project(3, height, 3)} L${project(-3, height, 3)} Z`} />)}
+      <g className="hero-fallback-sculpture" transform="translate(940 390)" fill="none" stroke={HERO_PALETTE.building.high} strokeWidth=".9">
+        {[-.1, -.7, -1.15].map((height) => <path key={height} opacity={height < -.2 ? .24 : .7} fill={height === -.1 ? HERO_PALETTE.board.slab : "none"} d={`M${project(-3, height, -3)} L${project(3, height, -3)} L${project(3, height, 3)} L${project(-3, height, 3)} Z`} />)}
+        <ellipse cx="-40" cy="20" rx="230" ry="100" fill="url(#hero-fallback-heat)" stroke="none" />
         {blocks.map(([x, z, height], i) => <g key={i}>
-          <path fill="#0f2932" fillOpacity=".7" d={`M${project(x, 0, z)} L${project(x + .7, 0, z)} L${project(x + .7, height, z)} L${project(x, height, z)} Z M${project(x, 0, z)} L${project(x, 0, z + .7)} L${project(x, height, z + .7)} L${project(x, height, z)} Z M${project(x, height, z)} L${project(x + .7, height, z)} L${project(x + .7, height, z + .7)} L${project(x, height, z + .7)} Z`} />
-          <circle cx={(x - z) * 39} cy={(x + z) * 17 - height * 44} r="1.5" fill="#c5e4e7" stroke="none" />
+          <path fill={HERO_PALETTE.building.fill} d={`M${project(x, 0, z)} L${project(x + .7, 0, z)} L${project(x + .7, height, z)} L${project(x, height, z)} Z M${project(x, 0, z)} L${project(x, 0, z + .7)} L${project(x, height, z + .7)} L${project(x, height, z)} Z M${project(x, height, z)} L${project(x + .7, height, z)} L${project(x + .7, height, z + .7)} L${project(x, height, z + .7)} Z`} />
+          <circle cx={(x - z) * 39} cy={(x + z) * 17 - height * 44} r="1.5" fill={HERO_PALETTE.building.high} stroke="none" />
         </g>)}
         {lots.map(([label, x, z]) => <g key={label}>
-          <path strokeDasharray="4 3" stroke={label === "A" ? "#f3b765" : "#a9cbd0"} d={`M${project(x, .02, z)} L${project(x + .7, .02, z)} L${project(x + .7, .02, z + .7)} L${project(x, .02, z + .7)} Z`} />
-          <text x={(x - z - .7) * 39 - 12} y={(x + z + .7) * 17 + 4} fill="#d8f0f1" stroke="none" fontSize="10" fontFamily="ui-monospace, monospace">{label}</text>
+          <path strokeDasharray="4 3" stroke={label === "A" ? HERO_PALETTE.lot.active : HERO_PALETTE.lot.idle} d={`M${project(x, .02, z)} L${project(x + .7, .02, z)} L${project(x + .7, .02, z + .7)} L${project(x, .02, z + .7)} Z`} />
+          <text x={(x - z - .7) * 39 - 12} y={(x + z + .7) * 17 + 4} fill={HERO_PALETTE.lot.label} stroke="none" fontSize="10" fontFamily="ui-monospace, monospace">{label}</text>
         </g>)}
-        <ellipse cx={(.75 - -.25) * 39} cy={(.75 + -.25) * 17} rx="150" ry="65" stroke="#f3b765" strokeOpacity=".7" />
-        <g transform={`translate(${(.75 - -.25) * 39} ${(.75 + -.25) * 17 - 120})`} stroke="#f8c884" strokeWidth="1.8">
-          <path fill="#f3b765" fillOpacity=".08" d="M0 56 C-14 32 -33 12 -33 -8 A33 33 0 1 1 33 -8 C33 12 14 32 0 56Z" />
+        <ellipse cx={(.75 - -.25) * 39} cy={(.75 + -.25) * 17} rx="150" ry="65" stroke={HERO_PALETTE.reach.ring} strokeOpacity=".8" />
+        <g transform={`translate(${(.75 - -.25) * 39} ${(.75 + -.25) * 17 - 120})`} stroke={HERO_PALETTE.pin.line} strokeWidth="1.8">
+          <path fill={HERO_PALETTE.pin.fill} fillOpacity=".12" d="M0 56 C-14 32 -33 12 -33 -8 A33 33 0 1 1 33 -8 C33 12 14 32 0 56Z" />
           <circle cy="-8" r="13" />
         </g>
       </g>

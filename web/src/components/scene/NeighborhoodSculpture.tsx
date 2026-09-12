@@ -4,17 +4,15 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
+import { glslColor } from "@/components/scene/glsl-color";
 import { heroSiteCycle } from "@/lib/animation/hero-site-cycle";
 import { seededRandom } from "@/lib/animation/seeded-random";
+import { HERO_PALETTE } from "@/lib/hero-palette";
 import type { SiteId } from "@/lib/types";
 
 type Point = [number, number, number];
 type Segment = [Point, Point];
 type Flat = [number, number];
-
-const AMBER = "#ffbe70";
-const CHALK = "#d8f0f1";
-const TEAL = "#4b8a97";
 
 // Street centerlines. Blocks sit between neighbors; each block holds a 2 x 2 grid of lots.
 const STREETS_X = [-2.9, -0.85, 0.95, 2.9];
@@ -183,9 +181,9 @@ const buildingFragment = /* glsl */ `
     float d = distance(vPosition.xz, uSite);
     float inside = (1.0 - smoothstep(uReach - 0.3, uReach, d)) * step(0.05, uReach);
     float edge = exp(-pow((d - uReach) / 0.14, 2.0)) * step(0.05, uReach);
-    vec3 ink = mix(vec3(0.22, 0.42, 0.48), vec3(0.50, 0.70, 0.73), smoothstep(0.0, 1.3, vPosition.y));
-    ink = mix(ink, vec3(0.84, 0.95, 0.94), inside * 0.8);
-    ink = mix(ink, vec3(1.0, 0.76, 0.45), edge * 0.85);
+    vec3 ink = mix(${glslColor(HERO_PALETTE.building.low)}, ${glslColor(HERO_PALETTE.building.high)}, smoothstep(0.0, 1.3, vPosition.y));
+    ink = mix(ink, ${glslColor(HERO_PALETTE.building.reached)}, inside * 0.8);
+    ink = mix(ink, ${glslColor(HERO_PALETTE.building.edge)}, edge * 0.85);
     gl_FragColor = vec4(ink, (0.55 + inside * 0.4 + edge * 0.3) * uOpacity);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -217,25 +215,83 @@ const coverageFragment = /* glsl */ `
     float ring = exp(-pow((d - uReach) / 0.03, 2.0));
     float inside = 1.0 - smoothstep(uReach - 0.03, uReach, d);
     float ripple = pow(max(0.0, sin(d * 9.0 - uTime * 2.4)), 12.0) * inside * 0.07;
-    float alpha = (ring * 0.9 + inside * 0.07 + ripple) * uStrength * uOpacity * step(0.02, uReach);
+    float alpha = (ring * 0.9 + inside * 0.025 + ripple) * uStrength * uOpacity * step(0.02, uReach);
     if (alpha < 0.003) discard;
-    gl_FragColor = vec4(1.0, 0.75, 0.44, alpha);
+    gl_FragColor = vec4(${glslColor(HERO_PALETTE.reach.ring)}, alpha);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
 `;
 
-function letterTexture(letter: string) {
+// Surface heat as a thermal ramp; inside the reach ring the ground cools toward blue.
+const heatFragment = /* glsl */ `
+  uniform vec2 uSite;
+  uniform float uReach;
+  uniform float uTime;
+  uniform float uOpacity;
+  varying vec2 vUv;
+
+  float blob(vec2 p, vec2 center, float radius) {
+    return exp(-dot(p - center, p - center) / (radius * radius));
+  }
+
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
+
+  float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+  }
+
+  float fbm(vec2 p) {
+    float value = 0.0;
+    float amplitude = 0.5;
+    for (int i = 0; i < 4; i++) {
+      value += amplitude * noise(p);
+      p *= 2.03;
+      amplitude *= 0.5;
+    }
+    return value;
+  }
+
+  vec3 thermal(float t) {
+    vec3 color = mix(${glslColor(HERO_PALETTE.heat.cool)}, ${glslColor(HERO_PALETTE.heat.mild)}, smoothstep(0.0, 0.3, t));
+    color = mix(color, ${glslColor(HERO_PALETTE.heat.warm)}, smoothstep(0.3, 0.55, t));
+    color = mix(color, ${glslColor(HERO_PALETTE.heat.hot)}, smoothstep(0.55, 0.8, t));
+    return mix(color, ${glslColor(HERO_PALETTE.heat.peak)}, smoothstep(0.8, 1.0, t));
+  }
+
+  void main() {
+    vec2 offset = (vUv * 2.0 - 1.0) * ${STREETS_X[3].toFixed(2)};
+    vec2 board = vec2(offset.x, -offset.y);
+    float drift = fbm(board * 0.8 + vec2(uTime * 0.04, -uTime * 0.03));
+    float heat = 0.62 * blob(board, vec2(-1.7, 1.5), 1.6) + 0.55 * blob(board, vec2(1.9, -1.3), 1.3)
+      + 0.45 * blob(board, vec2(1.3, 2.1), 1.0) + 0.3 * blob(board, vec2(-1.6, -1.9), 1.2);
+    heat = clamp(heat * 1.15 + drift * 0.7 - 0.02, 0.0, 1.0);
+    float cooled = (1.0 - smoothstep(uReach * 0.35, uReach, distance(board, uSite))) * step(0.05, uReach);
+    heat *= 1.0 - cooled * 0.95;
+    float edge = 1.0 - smoothstep(${(STREETS_X[3] - 0.25).toFixed(2)}, ${STREETS_X[3].toFixed(2)}, max(abs(board.x), abs(board.y)));
+    float alpha = mix(0.26 + heat * 0.5, 0.44, cooled);
+    gl_FragColor = vec4(thermal(heat), alpha * edge * uOpacity);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }
+`;
+
+function letterTexture(letter: string, color: string) {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = 96;
   const context = canvas.getContext("2d");
   if (context) {
-    context.strokeStyle = "rgba(216, 240, 241, .9)";
+    context.strokeStyle = color;
     context.lineWidth = 3;
     context.beginPath();
     context.arc(48, 48, 40, 0, Math.PI * 2);
     context.stroke();
-    context.fillStyle = "#d8f0f1";
+    context.fillStyle = color;
     context.font = "600 46px ui-monospace, SFMono-Regular, Menlo, monospace";
     context.textAlign = "center";
     context.textBaseline = "middle";
@@ -256,12 +312,14 @@ function pinShape() {
   return { shape, border };
 }
 
-export default function NeighborhoodSculpture({ reducedMotion = false, compact = false }: { reducedMotion?: boolean; compact?: boolean }) {
+type NeighborhoodSculptureProps = { reducedMotion?: boolean; compact?: boolean };
+
+export default function NeighborhoodSculpture({ reducedMotion = false, compact = false }: NeighborhoodSculptureProps) {
   const { size } = useThree();
   const aspect = size.width / size.height;
   const neighborhood = useMemo(() => createNeighborhood(), []);
   const pin = useMemo(() => pinShape(), []);
-  const labels = useMemo(() => SITES.map(({ id }) => letterTexture(id.toUpperCase())), []);
+  const labels = useMemo(() => SITES.map(({ id }) => letterTexture(id.toUpperCase(), HERO_PALETTE.lot.label)), []);
   const buildingGeometry = useMemo(() => segmentsGeometry(neighborhood.buildingLines), [neighborhood]);
   const facility = useMemo(() => {
     const { w, d } = SITES[0].lot;
@@ -296,7 +354,9 @@ export default function NeighborhoodSculpture({ reducedMotion = false, compact =
   // R3F gives each shader material its own uniform wrappers, so write through the materials.
   const buildingMaterial = useRef<THREE.ShaderMaterial>(null);
   const coverageMaterial = useRef<THREE.ShaderMaterial>(null);
-  const scratch = useMemo(() => ({ dummy: new THREE.Object3D(), color: new THREE.Color(), rest: new THREE.Color("#5f8e96"), reached: new THREE.Color("#fff1cf"), missed: new THREE.Color("#ff8673") }), []);
+  const heatMaterial = useRef<THREE.ShaderMaterial>(null);
+  const heatUniforms = useMemo(() => ({ uSite: { value: new THREE.Vector2() }, uReach: { value: 0 }, uTime: { value: 0 }, uOpacity: { value: 1 } }), []);
+  const scratch = useMemo(() => ({ dummy: new THREE.Object3D(), color: new THREE.Color(), rest: new THREE.Color(HERO_PALETTE.home.rest), reached: new THREE.Color(HERO_PALETTE.home.reached), missed: new THREE.Color(HERO_PALETTE.home.missed) }), []);
   const walkerOrder = useMemo(() => SITES.map((_, siteIndex) => neighborhood.homes
     .map((home, index) => ({ index, route: home.routes[siteIndex] }))
     .filter(({ route }) => route.distance < REACH)
@@ -349,6 +409,11 @@ export default function NeighborhoodSculpture({ reducedMotion = false, compact =
       buildingMaterial.current.uniforms.uSite.value.set(site.x, site.z);
       buildingMaterial.current.uniforms.uReach.value = reach;
     }
+    if (heatMaterial.current) {
+      heatMaterial.current.uniforms.uSite.value.set(site.x, site.z);
+      heatMaterial.current.uniforms.uReach.value = reach;
+      heatMaterial.current.uniforms.uTime.value = time.current;
+    }
     if (coverageMaterial.current) {
       coverageMaterial.current.uniforms.uSite.value.set(site.x, site.z);
       coverageMaterial.current.uniforms.uReach.value = reach;
@@ -359,7 +424,7 @@ export default function NeighborhoodSculpture({ reducedMotion = false, compact =
 
     SITES.forEach((_, index) => {
       const lotMaterial = lotMaterials.current[index];
-      if (lotMaterial) lotMaterial.color.set(index === siteIndex ? AMBER : CHALK);
+      if (lotMaterial) lotMaterial.color.set(index === siteIndex ? HERO_PALETTE.lot.active : HERO_PALETTE.lot.idle);
       const routeMaterial = routeMaterials.current[index];
       if (routeMaterial) routeMaterial.opacity = routeMaterial.userData.baseOpacity = index === siteIndex ? 0.5 * settled : 0;
     });
@@ -430,27 +495,31 @@ export default function NeighborhoodSculpture({ reducedMotion = false, compact =
       rotation={[0.2, -0.48, 0]}
       scale={compact ? Math.min(0.95, aspect * 1.75) : Math.min(1.22, aspect * 0.75)}
     >
-      <mesh position={[0, -0.13, 0]}><boxGeometry args={[5.8, 0.06, 5.8]} /><meshBasicMaterial color="#0a1b22" fog={false} /></mesh>
-      <Linework segments={neighborhood.base} color={CHALK} opacity={0.6} />
-      <Linework segments={neighborhood.underlay} color={TEAL} opacity={0.34} />
-      <Linework segments={neighborhood.streets} color="#6f949c" opacity={0.6} />
+      <mesh position={[0, -0.13, 0]}><boxGeometry args={[5.8, 0.06, 5.8]} /><meshBasicMaterial color={HERO_PALETTE.board.slab} fog={false} /></mesh>
+      <mesh position={[0, -0.095, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={-1}>
+        <planeGeometry args={[STREETS_X[3] * 2, STREETS_X[3] * 2]} />
+        <shaderMaterial ref={heatMaterial} vertexShader={coverageVertex} fragmentShader={heatFragment} uniforms={heatUniforms} transparent depthWrite={false} />
+      </mesh>
+      <Linework segments={neighborhood.base} color={HERO_PALETTE.board.base} opacity={0.6} />
+      <Linework segments={neighborhood.underlay} color={HERO_PALETTE.board.underlay} opacity={0.34} />
+      <Linework segments={neighborhood.streets} color={HERO_PALETTE.board.street} opacity={0.6} />
 
       <instancedMesh ref={fills} args={[undefined, undefined, neighborhood.buildings.length]} frustumCulled={false}>
         <boxGeometry />
-        <meshBasicMaterial color="#0b222a" fog={false} />
+        <meshBasicMaterial color={HERO_PALETTE.building.fill} fog={false} />
       </instancedMesh>
       <lineSegments geometry={buildingGeometry}>
         <shaderMaterial ref={buildingMaterial} vertexShader={buildingVertex} fragmentShader={buildingFragment} uniforms={buildingUniforms} transparent depthWrite={false} />
       </lineSegments>
-      <Linework segments={neighborhood.windows} color={TEAL} opacity={0.7} />
+      <Linework segments={neighborhood.windows} color={HERO_PALETTE.building.window} opacity={0.7} />
 
       {SITES.map(({ id, lot }, index) => (
         <group key={id}>
           <lineSegments geometry={lotOutlines[index]}>
-            <lineDashedMaterial ref={(material) => { lotMaterials.current[index] = material; }} color={CHALK} dashSize={0.07} gapSize={0.05} transparent opacity={0.85} depthWrite={false} fog={false} />
+            <lineDashedMaterial ref={(material) => { lotMaterials.current[index] = material; }} color={HERO_PALETTE.lot.idle} dashSize={0.07} gapSize={0.05} transparent opacity={0.85} depthWrite={false} fog={false} />
           </lineSegments>
           <lineSegments geometry={routeGeometries[index]}>
-            <lineBasicMaterial ref={(material) => { routeMaterials.current[index] = material; }} color={AMBER} transparent opacity={0} depthWrite={false} fog={false} />
+            <lineBasicMaterial ref={(material) => { routeMaterials.current[index] = material; }} color={HERO_PALETTE.reach.route} transparent opacity={0} depthWrite={false} fog={false} />
           </lineSegments>
           <sprite position={[lot.x - lot.w / 2 - 0.02, 0.2, lot.z + lot.d / 2 + 0.02]} scale={0.24}>
             <spriteMaterial map={labels[index]} transparent opacity={0.9} depthWrite={false} fog={false} />
@@ -471,24 +540,24 @@ export default function NeighborhoodSculpture({ reducedMotion = false, compact =
 
       <group ref={facilityGroup}>
         <lineSegments geometry={facility.geometry}>
-          <lineBasicMaterial ref={facilityLines} color="#ffe1a5" transparent depthWrite={false} fog={false} />
+          <lineBasicMaterial ref={facilityLines} color={HERO_PALETTE.facility.line} transparent depthWrite={false} fog={false} />
         </lineSegments>
         <mesh position={[0, 0.23, 0]}>
           <boxGeometry args={[facility.w, 0.46, facility.d]} />
-          <meshBasicMaterial ref={facilityFill} color={AMBER} transparent opacity={0} depthWrite={false} fog={false} />
+          <meshBasicMaterial ref={facilityFill} color={HERO_PALETTE.facility.fill} transparent opacity={0} depthWrite={false} fog={false} />
         </mesh>
       </group>
 
       <instancedMesh ref={residents} args={[undefined, undefined, neighborhood.homes.length * 2]} frustumCulled={false}>
         <sphereGeometry args={[0.036, 6, 6]} />
-        <meshBasicMaterial color="#fff1cf" fog={false} />
+        <meshBasicMaterial color={HERO_PALETTE.reach.resident} fog={false} />
       </instancedMesh>
 
       <group ref={pinGroup} rotation={[-0.2, 0.48, 0]} scale={0.72}>
-        <mesh><shapeGeometry args={[pin.shape, 48]} /><meshBasicMaterial color={AMBER} transparent opacity={0.12} side={THREE.DoubleSide} depthWrite={false} fog={false} /></mesh>
-        <mesh><tubeGeometry args={[pin.border, 100, 0.022, 5, true]} /><meshBasicMaterial color={AMBER} fog={false} /></mesh>
-        <mesh position={[0, 1.14, 0.015]}><ringGeometry args={[0.245, 0.275, 48]} /><meshBasicMaterial color="#ffcf8a" side={THREE.DoubleSide} fog={false} /></mesh>
-        <mesh position={[0, 1.14, 0.01]}><circleGeometry args={[0.24, 48]} /><meshBasicMaterial color="#0d2128" side={THREE.DoubleSide} fog={false} /></mesh>
+        <mesh><shapeGeometry args={[pin.shape, 48]} /><meshBasicMaterial color={HERO_PALETTE.pin.fill} transparent opacity={0.12} side={THREE.DoubleSide} depthWrite={false} fog={false} /></mesh>
+        <mesh><tubeGeometry args={[pin.border, 100, 0.022, 5, true]} /><meshBasicMaterial color={HERO_PALETTE.pin.line} fog={false} /></mesh>
+        <mesh position={[0, 1.14, 0.015]}><ringGeometry args={[0.245, 0.275, 48]} /><meshBasicMaterial color={HERO_PALETTE.pin.line} side={THREE.DoubleSide} fog={false} /></mesh>
+        <mesh position={[0, 1.14, 0.01]}><circleGeometry args={[0.24, 48]} /><meshBasicMaterial color={HERO_PALETTE.pin.hole} side={THREE.DoubleSide} fog={false} /></mesh>
       </group>
     </group>
   );

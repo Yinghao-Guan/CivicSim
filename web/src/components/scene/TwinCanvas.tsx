@@ -59,10 +59,21 @@ function VisibilityController() {
   return null;
 }
 
+/** The hero palette is authored as exact colors; the scenario city is tuned for ACES. */
+function ToneMapping({ enabled }: { enabled: boolean }) {
+  const { gl } = useThree();
+  const renderer = useRef(gl);
+  useEffect(() => {
+    renderer.current.toneMapping = enabled ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
+  }, [enabled]);
+  return null;
+}
+
 function HeroModel({ entering, reducedMotion }: { entering: boolean; reducedMotion: boolean }) {
   const { size } = useThree();
   return (
     <>
+      <ToneMapping enabled={false} />
       <FlowingCityGrid reducedMotion={reducedMotion} exiting={entering} />
       <FadeGroup visible={!entering} reducedMotion={reducedMotion}>
         <NeighborhoodSculpture compact={size.width < 769} reducedMotion={reducedMotion} />
@@ -85,6 +96,7 @@ function Scene() {
       <CameraRig stage={visualStage} reducedMotion={reducedMotion} />
       {isHero ? <HeroModel entering={visualStage === "entering"} reducedMotion={reducedMotion} /> : (
         <FadeGroup appear rate={2.4} reducedMotion={reducedMotion}>
+          <ToneMapping enabled />
           <group position={[1.6, -1.35, 0]} rotation={[0, -0.12, 0]}>
             <CitySystems selectedSite={selectedSite} recommendedSite={recommendedSite} lens={lens} stage={visualStage} />
             <ProceduralCity stage={visualStage} />

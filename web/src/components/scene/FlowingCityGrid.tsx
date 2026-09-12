@@ -4,7 +4,9 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
+import { glslColor } from "@/components/scene/glsl-color";
 import { seededRandom } from "@/lib/animation/seeded-random";
+import { HERO_PALETTE } from "@/lib/hero-palette";
 
 type FlowingCityGridProps = {
   opacity?: number;
@@ -51,8 +53,8 @@ const lineFragment = /* glsl */ `
 
   void main() {
     float passing = pow(max(0.0, sin(vGround.x * 0.3 + vGround.y * 0.22 - uTime * 0.3)), 7.0);
-    float alpha = (0.12 + vWeight * 0.12 + passing * 0.055) * edgeFade(vGround) * uOpacity;
-    gl_FragColor = vec4(0.39, 0.61, 0.67, alpha);
+    float alpha = (0.12 + vWeight * 0.12 + passing * 0.055) * edgeFade(vGround) * uOpacity * ${HERO_PALETTE.grid.alpha.toFixed(2)};
+    gl_FragColor = vec4(${glslColor(HERO_PALETTE.grid.line)}, alpha);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
@@ -78,9 +80,9 @@ const nodeFragment = /* glsl */ `
 
   void main() {
     float disc = 1.0 - smoothstep(0.22, 0.5, length(gl_PointCoord - 0.5));
-    float alpha = disc * (0.32 + vWeight * 0.26) * edgeFade(vGround) * uOpacity;
+    float alpha = disc * (0.32 + vWeight * 0.26) * edgeFade(vGround) * uOpacity * ${HERO_PALETTE.grid.alpha.toFixed(2)};
     if (alpha < 0.004) discard;
-    gl_FragColor = vec4(0.60, 0.78, 0.80, alpha);
+    gl_FragColor = vec4(${glslColor(HERO_PALETTE.grid.node)}, alpha);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
@@ -120,7 +122,7 @@ const packetFragment = /* glsl */ `
     float disc = 1.0 - smoothstep(0.10, 0.5, length(gl_PointCoord - 0.5));
     float alpha = disc * (0.70 - vTail * 0.12) * edgeFade(vGround) * uOpacity;
     if (alpha < 0.004) discard;
-    gl_FragColor = vec4(0.60, 0.83, 0.84, alpha);
+    gl_FragColor = vec4(${glslColor(HERO_PALETTE.grid.packet)}, alpha);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
@@ -131,7 +133,7 @@ const faceFragment = /* glsl */ `
   varying float vWeight;
 
   void main() {
-    gl_FragColor = vec4(0.29, 0.49, 0.53, (0.024 + vWeight * 0.02) * edgeFade(vGround) * uOpacity);
+    gl_FragColor = vec4(${glslColor(HERO_PALETTE.grid.face)}, (0.024 + vWeight * 0.02) * edgeFade(vGround) * uOpacity * ${HERO_PALETTE.grid.alpha.toFixed(2)});
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
