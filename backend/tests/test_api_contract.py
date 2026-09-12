@@ -11,11 +11,13 @@ from fastapi.testclient import TestClient
 from data.demo_neighborhood import (
     BASELINE_DESTINATION,
     CANDIDATE_SITES,
+    DEMO_AREA_SWNE,
     build_demo_cohort,
     build_demo_graph,
     site,
 )
 from main import app
+from simulation.heat import street_heat
 from simulation.scenarios import evaluate_baseline, evaluate_scenario
 
 FRONTEND_ORIGIN = "http://localhost:3000"
@@ -178,8 +180,24 @@ def test_run_metadata_describes_the_actual_run(client):
     assert run["route_sample_count"] == len(body["routes"])
 
 
-def test_heatmap_is_empty_in_p0(client):
-    assert client.post("/simulate", json={"cooling_center": "site_b"}).json()["heatmap"] == []
+def test_heatmap_samples_street_heat_inside_the_demo_area(client):
+    heatmap = client.post("/simulate", json={"cooling_center": "site_b"}).json()["heatmap"]
+    south, west, north, east = DEMO_AREA_SWNE
+    intensities = {round(s.intensity, 4) for s in street_heat(build_demo_graph())}
+
+    assert heatmap
+    for point in heatmap:
+        lon, lat = point["position"]
+        assert west <= lon <= east and south <= lat <= north
+        assert 0.0 <= point["weight"] <= 1.0
+    assert {point["weight"] for point in heatmap} == intensities
+
+
+def test_heatmap_is_a_property_of_the_neighborhood_not_the_proposal(client):
+    baseline = client.get("/baseline").json()["baseline"]["heatmap"]
+    site_c = client.post("/simulate", json={"cooling_center": "site_c"}).json()["heatmap"]
+
+    assert baseline == site_c
 
 
 def test_the_demo_invariants_survive_the_api(client):

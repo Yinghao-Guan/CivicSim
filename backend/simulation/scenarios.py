@@ -11,6 +11,7 @@ from typing import Hashable, Sequence
 import networkx as nx
 
 from simulation.agents import Agent
+from simulation.heat import StreetHeat, street_heat
 from simulation.metrics import REACH_THRESHOLD_MINUTES, Metrics, aggregate_metrics
 from simulation.routing import Route, Unreachable, route_agent
 
@@ -49,6 +50,9 @@ class ScenarioResult:
     metrics: Metrics
     routes: tuple[Route, ...]
     unreachable: tuple[Unreachable, ...]
+    #: Heat along the streets agents walk. A property of the neighborhood, so
+    #: every scenario over the same graph carries the same values.
+    street_heat: tuple[StreetHeat, ...] = ()
 
 
 def evaluate_scenario(
@@ -63,6 +67,7 @@ def evaluate_scenario(
         metrics=aggregate_metrics(cohort, reached, site.capacity),
         routes=tuple(route for _, route in reached),
         unreachable=tuple(unreachable),
+        street_heat=street_heat(graph),
     )
 
 
@@ -83,6 +88,7 @@ def evaluate_baseline(
         metrics=aggregate_metrics(cohort, reached, capacity=None),
         routes=tuple(route for _, route in reached),
         unreachable=tuple(unreachable),
+        street_heat=street_heat(graph),
     )
 
 

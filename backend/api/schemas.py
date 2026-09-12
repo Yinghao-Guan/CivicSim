@@ -49,7 +49,7 @@ class UnreachableAgentModel(BaseModel):
 
 
 class HeatmapPointModel(BaseModel):
-    """docs/03-api-contract.md section 10. Unused in P0."""
+    """docs/03-api-contract.md section 10: street heat sampled along the graph."""
 
     position: Coordinate
     weight: float

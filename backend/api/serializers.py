@@ -4,10 +4,12 @@ This is the only place graph node ids become coordinates. It performs no
 aggregation: every number it emits was produced by the simulation engine.
 """
 
+import math
 from typing import Sequence
 
 from api.schemas import (
     CandidateSiteModel,
+    HeatmapPointModel,
     InterventionsModel,
     MetricsModel,
     RouteModel,
@@ -16,12 +18,21 @@ from api.schemas import (
     UnreachableAgentModel,
 )
 from data.demo_neighborhood import MODEL_VERSION, POPULATION_VERSION, location
+from simulation.heat import StreetHeat
 from simulation.metrics import Metrics
 from simulation.scenarios import CandidateSite, ScenarioResult
 
 #: P0 routes on foot only. Transit would populate this field differently
 #: without changing the schema.
 WALK_MODE = "walk"
+
+#: Street heat is sampled about this often along each segment, so the map can
+#: draw a continuous field rather than one dot per street.
+HEAT_SAMPLE_SPACING_M = 40.0
+
+#: Metres per degree near the demo area (latitude ~34 N).
+_M_PER_DEG_LON = 92_200.0
+_M_PER_DEG_LAT = 110_900.0
 
 #: The cohort is enumerated rather than sampled, so no seed is consumed yet.
 #: Reported as null rather than inventing a number that nothing used.
@@ -48,7 +59,7 @@ def to_scenario_response(
         metrics=_metrics(result.metrics),
         routes=routes,
         unreachable_agents=[_unreachable(u) for u in result.unreachable],
-        heatmap=[],
+        heatmap=_heatmap(result.street_heat),
         run=RunModel(
             model_version=MODEL_VERSION,
             population_version=POPULATION_VERSION,
@@ -92,6 +103,34 @@ def _route(route) -> RouteModel:
         heat_exposure=route.heat_exposure,
         path=[location(node) for node in route.path],
     )
+
+
+def _heatmap(segments: Sequence[StreetHeat]) -> list[HeatmapPointModel]:
+    """Sample each street's heat intensity along its drawn line.
+
+    Samples sit at the middle of equal steps, so two streets meeting at a node
+    never stack a point on the junction. The weight is the segment's intensity
+    unchanged; only positions are generated here.
+    """
+    points: list[HeatmapPointModel] = []
+    for segment in segments:
+        (lon_a, lat_a), (lon_b, lat_b) = location(segment.u), location(segment.v)
+        length = math.hypot(
+            (lon_b - lon_a) * _M_PER_DEG_LON, (lat_b - lat_a) * _M_PER_DEG_LAT
+        )
+        steps = max(1, math.ceil(length / HEAT_SAMPLE_SPACING_M))
+        for step in range(steps):
+            t = (step + 0.5) / steps
+            points.append(
+                HeatmapPointModel(
+                    position=(
+                        round(lon_a + (lon_b - lon_a) * t, 6),
+                        round(lat_a + (lat_b - lat_a) * t, 6),
+                    ),
+                    weight=round(segment.intensity, 4),
+                )
+            )
+    return points
 
 
 def _unreachable(unreachable) -> UnreachableAgentModel:
