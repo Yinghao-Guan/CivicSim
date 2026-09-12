@@ -51,7 +51,9 @@ Doc 02 §4.2 shows buildings coming from a vector-tile source (`"source-layer": 
 
 ### 3.1 Decision
 
-Start with a **~1.5–2 km² slice around The Beehive** (believed to be in CD 9; South Park / Central-Alameda / Florence area). If time allows, **expand toward full coverage of Council Districts 8, 9, and 10**.
+Start with a **~3 km² slice around The Beehive** (confirmed CD 9; South Park neighborhood). If time allows, **expand toward full coverage of Council Districts 8, 9, and 10**.
+
+> **Amended 2026-09-12 by M0.** This section originally specified ~1.5–2 km². Surveying the area showed that a 2 km² box contains only **one** facility plausible as a cooling center (the Mary McLeod Bethune pool), which cannot support the three candidate sites doc 01 §18.1 requires. The box was enlarged to 3.00 km² to include the Slauson Senior Multipurpose Center and Slauson Recreation Center cluster. Exact coordinates and measurements: [`04-map-milestone-plan.md`](./04-map-milestone-plan.md) §3.
 
 ### 3.2 Why
 
@@ -68,12 +70,14 @@ Start with a **~1.5–2 km² slice around The Beehive** (believed to be in CD 9;
 - **Vermont Square (CD 8/9 border)** — already referenced in doc 01 examples (`vermont_square_07`, "west of Vermont Avenue"); heavy bus corridor; farther from the venue.
 - **Leimert Park / Crenshaw (CD 8)** — recognizable, K Line stations; higher canopy and income, so a weaker heat-equity story.
 
-### 3.4 To verify when building the slice
+### 3.4 Verified when building the slice
 
-- The Beehive's council district (confirm CD 9 against official boundaries).
-- The exact venue address (sources list both 1000 E. 60th St. and 950 E. 60th St.).
-- Share of OSM buildings in the slice that carry height data.
-- Exact bounding box, drawn on the residential side of the corridor.
+**All four items resolved by M0 on 2026-09-12.** Results are recorded in [`04-map-milestone-plan.md`](./04-map-milestone-plan.md) §3; summarized here:
+
+- **Council district — confirmed CD 9** (Curren D. Price Jr.), by point query against two City of LA boundary layers.
+- **Venue address — 1000 E. 60th St.** (`33.98530, -118.25747`). OSM carries `The Beehive` as a named `amenity=conference_centre` at this point; 950 E. 60th St. is a separate address point ~190 m west.
+- **Height coverage — 96.2%** of buildings carry `height`, with LiDAR-derived decimal values. The fallback chain is a safety net, not a load-bearing path.
+- **Bounding box — drawn and recorded.** The Alameda rail corridor turned out to be 2.16 km east of the venue, outside any box at this scale, so the §3.2 boundary note did not constrain the result; the box was instead shaped to lower its industrial/warehouse building share.
 
 ---
 
@@ -85,7 +89,7 @@ Start with a **~1.5–2 km² slice around The Beehive** (believed to be in CD 9;
 
 | Stage | Scale (rough estimate) | Pressure point | Expectation |
 | --- | --- | --- | --- |
-| Beehive slice | ~1.5–2 km², several thousand to ~10k buildings | Negligible | Smooth |
+| Beehive slice | 3.00 km², ~4,900 buildings (measured) | Negligible | Smooth |
 | deck.gl simulation layer | ~150 animated agents, hundreds of routes | Negligible | Smooth |
 | Backend routing | ~2,500 agents with NetworkX | Single-core CPU | Seconds |
 | CD 8/9/10 expansion | 100+ km², possibly hundreds of thousands of buildings | **Data loading strategy**, not GPU | Requires pipeline change (below) |
@@ -103,6 +107,8 @@ Start with a **~1.5–2 km² slice around The Beehive** (believed to be in CD 9;
 ---
 
 ## 5. Next steps on the `map` branch
+
+> These four steps are sequenced, with done-criteria and cross-platform notes, in [`04-map-milestone-plan.md`](./04-map-milestone-plan.md). The open items in §3.4 above are resolved there in §3.
 
 1. Scaffold `web/` (Next.js, App Router, TypeScript); load MapLibre with OpenFreeMap, pitched camera on the Beehive area.
 2. Write a preprocessing script that extracts the slice's buildings from OSM into `buildings.geojson` with IDs, heights (with fallbacks), and facility attributes.
