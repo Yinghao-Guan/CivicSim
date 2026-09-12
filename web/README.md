@@ -3,10 +3,10 @@
 Interactive frontend for the CivicSim neighborhood decision studio: Next.js (App Router, TypeScript), a React Three Fiber hero, and MapLibre GL JS with an interleaved deck.gl overlay for the real neighborhood. Next renders the product; the FastAPI backend in `../backend` owns every simulation number.
 
 - `/` — opening hero
-- `/setup` — guided experiment briefing
-- `/simulate` — live simulation choreography
-- `/results` — living comparison workspace
+- `/studio` — the real South Park map: brief, candidates, run, and the results dashboard on live backend data
 - `/lab` — integration workbench: the live map and scenario panel on their own
+
+`/setup`, `/simulate` and `/results` redirect to `/studio`.
 
 ## Local development
 
@@ -37,11 +37,22 @@ Copy `.env.example` to `.env.local` and edit it. `NEXT_PUBLIC_*` values are inli
 
 For demo day, follow the runbook in [`../docs/05-map-milestone-plan.md`](../docs/05-map-milestone-plan.md) §8.4 — the step that matters is turning Wi-Fi **off** and reloading.
 
+## Demo day
+
+1. `cd backend && uv run uvicorn main:app --port 8000` — the studio shows a retry panel until it answers.
+2. In `web/`, set `NEXT_PUBLIC_OFFLINE_TILES=on` in `.env.local`, then `npm run build && npm start` (or `npm run dev`).
+3. Turn Wi-Fi off and reload `/studio` once to confirm the basemap still draws.
+4. In the results dashboard, `1`–`3` pick a site and `L` cycles Everyone → Heat-vulnerable → Wheelchair users. The reveal: open on Slauson (most residents), press `L` twice, then follow "Show Mary McLeod Bethune Swimming Pool".
+
+Every number in the studio comes from the backend. The street heat field is the backend's `heatmap` — each segment's modeled heat exposure over its travel time — smoothed for drawing.
+
 ## Layout
 
 ```text
 src/app/                    routes; /lab keeps the map workbench and its own CSS
-src/components/scene/       R3F hero and scenario twin
+src/components/scene/       R3F hero
+src/components/studio/      StudioScreen (panel flow) and StudioMap (heat-survey map)
+src/lib/studio-map.ts       paper restyle of the basemap, white slice, heat field from `heatmap`
 src/components/map/         MapView (ssr:false wrapper) -> CityMap (the map itself)
 src/components/panels/      map workbench panels
 src/lib/api.ts, contract.ts FastAPI client and a mirror of docs/03-api-contract.md
@@ -61,4 +72,4 @@ public/offline/             offline basemap package (42 tiles + glyphs)
 
 The homepage pairs a flowing street network with a floating neighborhood sculpture that acts out the product in miniature. `FlowingCityGrid` draws street lines, junctions, traveling points, and sparse ground faces in four GPU draw calls. `NeighborhoodSculpture` cycles through the scenario's three candidate lots (A, B, C): a pin moves to each lot, a facility rises, a walking-reach ring expands, buildings inside it sharpen, residents walk to the site along streets, the heat map cools inside the ring, and homes left outside are marked in ink. Colors come from `HERO_PALETTE`: paper and graphite, a thermal ramp for heat, and a single vermilion mark for the decision. `BuiltWithLoop` credits the event and stack below the call to action. The caption under the sculpture follows the site being tested via `heroSiteCycle`. Everything is authored geometry, not a downloaded or geographically accurate city model.
 
-`FadeGroup` fades the sculpture out on entry and fades the scenario city in on `/setup`. Narrow layouts place the sculpture below the copy. Reduced motion holds a finished test of the recommended site instead of cycling, and hidden tabs stop rendering. `HeroSceneFallback` preserves the same idea while WebGL loads or is unavailable.
+`FadeGroup` fades the sculpture out on entry before the studio map fades in. Narrow layouts place the sculpture below the copy. Reduced motion holds a finished test of the recommended site instead of cycling, and hidden tabs stop rendering. `HeroSceneFallback` preserves the same idea while WebGL loads or is unavailable.

@@ -16,9 +16,6 @@ const TwinCanvas = dynamic(() => import("@/components/scene/TwinCanvas"), {
 
 const stageByPath: Record<string, VisualStage> = {
   "/": "hero",
-  "/setup": "setup",
-  "/simulate": "simulate",
-  "/results": "results",
 };
 
 export default function ExperienceShell({ children }: { children: React.ReactNode }) {

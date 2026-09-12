@@ -198,7 +198,7 @@ export default function StudioMap({ stage, candidates, heatmap, scenario, focusS
   // MapLibre sets `position: relative` on its container, so the sized box is a wrapper.
   return (
     <div className="studio-map" style={{ background: STUDIO_COLORS.paper }}>
-      <div ref={container} className="studio-map__canvas" />
+      <div ref={container} className={`studio-map__canvas${ready ? " is-ready" : ""}`} />
     </div>
   );
 }

@@ -402,7 +402,8 @@ a { text-decoration: none; }
   background: var(--studio-paper);
 }
 .studio-map { position: absolute; inset: 0; background: var(--studio-paper); }
-.studio-map__canvas { width: 100%; height: 100%; }
+.studio-map__canvas { width: 100%; height: 100%; opacity: 0; transition: opacity 1.4s var(--ease-out); }
+.studio-map__canvas.is-ready { opacity: 1; }
 .studio-topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 3; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; pointer-events: none; }
 .studio-topbar > * { pointer-events: auto; }
 .studio-brand { font-size: 17px; font-weight: 620; letter-spacing: -.035em; }

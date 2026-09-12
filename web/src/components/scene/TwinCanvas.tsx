@@ -6,11 +6,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { useExperience } from "@/components/experience/ExperienceProvider";
-import CitySystems from "@/components/scene/CitySystems";
 import FadeGroup from "@/components/scene/FadeGroup";
 import FlowingCityGrid from "@/components/scene/FlowingCityGrid";
 import NeighborhoodSculpture from "@/components/scene/NeighborhoodSculpture";
-import ProceduralCity from "@/components/scene/ProceduralCity";
 import SceneFallback from "@/components/scene/SceneFallback";
 import type { VisualStage } from "@/lib/experience-types";
 
@@ -83,7 +81,7 @@ function HeroModel({ entering, reducedMotion }: { entering: boolean; reducedMoti
 }
 
 function Scene() {
-  const { selectedSite, recommendedSite, lens, visualStage } = useExperience();
+  const { visualStage } = useExperience();
   const reducedMotion = Boolean(useReducedMotion());
   const isHero = visualStage === "hero" || visualStage === "entering";
   return (
@@ -94,15 +92,8 @@ function Scene() {
       <directionalLight position={[8, 5, -8]} intensity={0.68} color="#ffbd77" />
       <VisibilityController />
       <CameraRig stage={visualStage} reducedMotion={reducedMotion} />
-      {isHero ? <HeroModel entering={visualStage === "entering"} reducedMotion={reducedMotion} /> : (
-        <FadeGroup appear rate={2.4} reducedMotion={reducedMotion}>
-          <ToneMapping enabled />
-          <group position={[1.6, -1.35, 0]} rotation={[0, -0.12, 0]}>
-            <CitySystems selectedSite={selectedSite} recommendedSite={recommendedSite} lens={lens} stage={visualStage} />
-            <ProceduralCity stage={visualStage} />
-          </group>
-        </FadeGroup>
-      )}
+      {/* Past the hero the studio's real map takes over, so the twin draws nothing else. */}
+      {isHero && <HeroModel entering={visualStage === "entering"} reducedMotion={reducedMotion} />}
     </>
   );
 }
