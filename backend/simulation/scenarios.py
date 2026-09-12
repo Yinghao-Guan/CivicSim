@@ -56,13 +56,21 @@ class ScenarioResult:
 
 
 def evaluate_scenario(
-    graph: nx.Graph, cohort: Sequence[Agent], site: CandidateSite
+    graph: nx.Graph,
+    cohort: Sequence[Agent],
+    site: CandidateSite,
+    scenario_id: str | None = None,
 ) -> ScenarioResult:
-    """Route every agent to `site` and aggregate the result."""
+    """Route every agent to `site` and aggregate the result.
+
+    `scenario_id` defaults to the site's own id, which is what makes a run the
+    canonical result for that site. A run with interventions applied passes its
+    own id so it is stored beside the canonical one rather than over it.
+    """
     reached, unreachable = _route_cohort(graph, cohort, site.node)
 
     return ScenarioResult(
-        scenario_id=site.id,
+        scenario_id=scenario_id or site.id,
         selected_site=site.id,
         metrics=aggregate_metrics(cohort, reached, site.capacity),
         routes=tuple(route for _, route in reached),

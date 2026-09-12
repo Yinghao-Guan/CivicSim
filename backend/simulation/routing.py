@@ -19,6 +19,9 @@ WEIGHT_ATTR = "travel_time"
 #: A missing value is treated as accessible.
 ACCESSIBLE_ATTR = "wheelchair_accessible"
 
+#: Edge attribute holding the stable id the API exposes for interventions.
+EDGE_ID_ATTR = "edge_id"
+
 #: Edge attribute holding modeled unshaded heat exposure in minutes.
 #: Every edge of a walking graph must declare it: silently treating a missing
 #: value as zero would understate exposure rather than report a data gap.

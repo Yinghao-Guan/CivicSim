@@ -8,8 +8,18 @@
  * leader only by comparing two numbers the backend produced.
  */
 
-import type { SimulationResponse } from "@/lib/contract";
+import type { CandidateSite, SimulationResponse } from "@/lib/contract";
+import { facilityName, facilityShortName } from "@/lib/facilities";
+import {
+  SHADE_SITE_ID,
+  SITE_B_APPROACH_SEGMENTS,
+} from "@/lib/interventions";
 import { BASELINE_ID, type ScenarioState } from "@/lib/useScenarios";
+
+interface ScenarioPanelProps extends ScenarioState {
+  focusMobility: boolean;
+  onToggleFocusMobility: () => void;
+}
 
 const integer = new Intl.NumberFormat("en-US");
 const share = new Intl.NumberFormat("en-US", {
@@ -59,9 +69,131 @@ function Metrics({ scenario }: { scenario: SimulationResponse }) {
   );
 }
 
+/**
+ * What the user's own edit changed.
+ *
+ * `before` is the unedited run of the same site, still in the cache; `after` is
+ * the edited one. Both came from the backend, so the delta is a subtraction of
+ * two simulated values, not an estimate of what shade "should" do.
+ */
+function EditedProposal({
+  before,
+  after,
+  onRevert,
+}: {
+  before: SimulationResponse | undefined;
+  after: SimulationResponse;
+  onRevert: () => void;
+}) {
+  const beforeHeat = before?.metrics.average_heat_exposure;
+  const afterHeat = after.metrics.average_heat_exposure;
+  const drop =
+    beforeHeat !== undefined && beforeHeat > 0
+      ? (beforeHeat - afterHeat) / beforeHeat
+      : null;
+
+  // What the backend said about *this* run and not the unedited one: the
+  // assumption behind the number above, in the backend's own words rather
+  // than a copy of them kept in sync by hand.
+  const editWarnings = before
+    ? after.warnings.filter((w) => !before.warnings.includes(w))
+    : [];
+
+  return (
+    <div className="edit">
+      <p className="edit-flag">
+        Your edit · {after.interventions.shade_segments.length} shaded segments
+      </p>
+      {beforeHeat !== undefined && (
+        <p className="edit-delta">
+          <span className="edit-was">{minutes(beforeHeat)}</span>
+          <span className="edit-arrow">→</span>
+          <span className="edit-now">{minutes(afterHeat)}</span>
+          {drop !== null && (
+            <span className="edit-drop">{share.format(drop)} less heat</span>
+          )}
+        </p>
+      )}
+      <p className="edit-note">
+        Re-simulated over the shaded streets. Travel times are unchanged, so the
+        same residents walk the same routes — in less sun.
+      </p>
+      {editWarnings.map((warning) => (
+        <p key={warning} className="edit-assumption">
+          {warning}
+        </p>
+      ))}
+      <button type="button" className="panel-action" onClick={onRevert}>
+        Remove shade
+      </button>
+    </div>
+  );
+}
+
+/**
+ * How the numbers above were produced.
+ *
+ * Everything shown comes from the response's own `run` block and `warnings`;
+ * nothing is restated from memory. Collapsed by default so it never competes
+ * with the metrics, but one click from any judge who asks.
+ */
+function HowCalculated({ scenario }: { scenario: SimulationResponse }) {
+  const { run } = scenario;
+
+  return (
+    <details className="how">
+      <summary>How this is calculated</summary>
+
+      <p className="how-lede">
+        Residents are <strong>synthetic</strong> — modeled travel needs and
+        constraints, never real people. Every figure is a deterministic
+        simulation over a walking graph, produced to{" "}
+        <strong>compare scenarios against each other</strong>. These are not
+        forecasts of what will happen.
+      </p>
+
+      <dl className="how-fields">
+        <dt>Model</dt>
+        <dd>{run.model_version}</dd>
+
+        <dt>Population</dt>
+        <dd>{run.population_version}</dd>
+
+        <dt>Agents simulated</dt>
+        <dd>{integer.format(run.agent_count)}</dd>
+
+        <dt>Routes returned</dt>
+        <dd>{integer.format(run.route_sample_count)}</dd>
+
+        <dt>Seed</dt>
+        <dd>{run.seed === null ? "none — cohort is enumerated" : run.seed}</dd>
+      </dl>
+
+      {scenario.warnings.length > 0 && (
+        <ul className="how-warnings">
+          {scenario.warnings.map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      )}
+    </details>
+  );
+}
+
 /** Side-by-side once more than one scenario has been run. */
-function Comparison({ results }: { results: Record<string, SimulationResponse> }) {
-  const runs = Object.values(results).filter((r) => r.selected_site !== null);
+function Comparison({
+  results,
+  candidates,
+}: {
+  results: Record<string, SimulationResponse>;
+  candidates: CandidateSite[];
+}) {
+  // Canonical runs only: an edited run shares its site's name, so including it
+  // would list the same site twice with no way to tell the rows apart. The
+  // edit gets its own before/after panel instead.
+  const runs = Object.values(results).filter(
+    (r) => r.selected_site !== null && r.scenario_id === r.selected_site,
+  );
   if (runs.length < 2) return null;
 
   const best = (pick: (r: SimulationResponse) => number) =>
@@ -83,7 +215,13 @@ function Comparison({ results }: { results: Record<string, SimulationResponse> }
         <tbody>
           {runs.map((run) => (
             <tr key={run.scenario_id}>
-              <th scope="row">{run.selected_site}</th>
+              <th scope="row">
+                {candidates.find((c) => c.id === run.selected_site)?.name ??
+                  run.selected_site}
+                <span className="compare-facility">
+                  {facilityShortName(run.selected_site)}
+                </span>
+              </th>
               <td className={run.scenario_id === mostReach ? "compare-lead" : undefined}>
                 {integer.format(run.metrics.population_reached)}
               </td>
@@ -100,15 +238,17 @@ function Comparison({ results }: { results: Record<string, SimulationResponse> }
       </table>
       {runs.length > 1 && mostReach !== mostAccessible && (
         <p className="compare-note">
-          {mostReach} reaches the most residents, but {mostAccessible} serves
-          mobility-constrained residents better. There is no single best site.
+          {facilityShortName(mostReach)} reaches the most residents, but{" "}
+          {facilityShortName(mostAccessible)} serves mobility-constrained
+          residents better. There is no single best site.
         </p>
       )}
     </div>
   );
 }
 
-export default function ScenarioPanel(state: ScenarioState) {
+export default function ScenarioPanel(props: ScenarioPanelProps) {
+  const { focusMobility, onToggleFocusMobility, ...state } = props;
   const {
     load,
     loadError,
@@ -120,8 +260,13 @@ export default function ScenarioPanel(state: ScenarioState) {
     runError,
     select,
     runAllCandidates,
+    runIntervention,
     retry,
   } = state;
+
+  const edited = (active?.interventions.shade_segments.length ?? 0) > 0;
+  const canShade =
+    active !== null && !edited && active.selected_site === SHADE_SITE_ID;
 
   if (load === "loading") {
     return (
@@ -154,10 +299,14 @@ export default function ScenarioPanel(state: ScenarioState) {
     <aside className="panel panel--scenario" aria-label="Simulation">
       <header className="panel-head">
         <div>
-          <h2>Cooling center</h2>
-          <p className="panel-id">
-            {active ? active.scenario_id : "—"} · {active?.run.model_version}
-          </p>
+          <h2>{edited ? "Site B + shade" : "Cooling center"}</h2>
+          {facilityName(active?.selected_site ?? null) ? (
+            <p className="panel-facility">
+              {facilityName(active?.selected_site ?? null)}
+            </p>
+          ) : (
+            <p className="panel-id">{active?.scenario_id ?? "—"}</p>
+          )}
         </div>
       </header>
 
@@ -193,12 +342,53 @@ export default function ScenarioPanel(state: ScenarioState) {
             </p>
           )}
           <Metrics scenario={active} />
+
+          {active.routes.length > 0 && (
+            <button
+              type="button"
+              className={`focus-toggle${focusMobility ? " is-on" : ""}`}
+              aria-pressed={focusMobility}
+              onClick={onToggleFocusMobility}
+            >
+              <span className="focus-dot" aria-hidden="true" />
+              {focusMobility
+                ? "Showing mobility-constrained"
+                : "Focus mobility-constrained"}
+            </button>
+          )}
+
+          {edited && (
+            <EditedProposal
+              before={active.selected_site ? results[active.selected_site] : undefined}
+              after={active}
+              onRevert={() => select(SHADE_SITE_ID)}
+            />
+          )}
+
+          {canShade && (
+            <button
+              type="button"
+              className="panel-action panel-action--edit"
+              disabled={running !== null}
+              onClick={() =>
+                runIntervention(SHADE_SITE_ID, SITE_B_APPROACH_SEGMENTS)
+              }
+            >
+              {running ? "Simulating…" : "Add shade to approach"}
+            </button>
+          )}
         </>
       ) : (
         <p className="panel-id">Running…</p>
       )}
 
-      <Comparison results={results} />
+      {/*
+        Hidden while an edit is on screen. The edit's own before/after is the
+        thing being explained at that moment, and on a 768px-tall projector the
+        full table pushes it below the fold — the one place a scroll would cost
+        the demo. Removing the shade brings the table straight back.
+      */}
+      {!edited && <Comparison results={results} candidates={candidates} />}
 
       {Object.keys(results).length <= candidates.length && (
         <button
@@ -211,9 +401,7 @@ export default function ScenarioPanel(state: ScenarioState) {
         </button>
       )}
 
-      {active?.warnings.length ? (
-        <p className="panel-footnote">{active.warnings.join(" ")}</p>
-      ) : null}
+      {active && <HowCalculated scenario={active} />}
     </aside>
   );
 }

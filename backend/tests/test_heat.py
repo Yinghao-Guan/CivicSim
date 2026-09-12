@@ -12,7 +12,7 @@ def test_every_edge_gets_exposed_minutes_per_minute_walked():
     heat = {(s.u, s.v): s.intensity for s in street_heat(build_demo_graph())}
 
     assert len(heat) == len(DEMO_EDGES)
-    for u, v, travel_time, _accessible, exposure in DEMO_EDGES:
+    for _edge_id, u, v, travel_time, _accessible, exposure in DEMO_EDGES:
         a, b = sorted((u, v), key=str)
         assert heat[(a, b)] == pytest.approx(exposure / travel_time)
 

@@ -147,7 +147,8 @@
 .map-status {
   position: absolute;
   top: 12px;
-  left: 12px;
+  /* Clear of the scenario panel, which owns the top-left corner. */
+  left: 296px;
   z-index: 2;
   max-width: 340px;
   padding: 8px 12px;
@@ -203,7 +204,7 @@
   width: 296px;
   max-height: calc(100% - 80px);
   overflow-y: auto;
-  padding: 14px 16px 12px;
+  padding: 12px 15px 11px;
   border: 1px solid var(--chrome-border);
   border-radius: 7px;
   background: rgb(34 32 29 / 96%);
@@ -247,6 +248,9 @@
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--ink-faint);
+  /* Scenario ids grow with the interventions applied; wrap rather than
+     stretching the panel into a horizontal scrollbar. */
+  overflow-wrap: anywhere;
 }
 
 .panel-badge {
@@ -263,8 +267,8 @@
 .panel-fields {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 7px 14px;
-  margin: 13px 0 0;
+  gap: 4px 14px;
+  margin: 10px 0 0;
   font-size: 12.5px;
 }
 
@@ -323,8 +327,8 @@
 
 .panel-action {
   width: 100%;
-  margin-top: 12px;
-  padding: 7px 10px;
+  margin-top: 9px;
+  padding: 6px 10px;
   border: 1px solid var(--chrome-border);
   border-radius: 5px;
   background: none;
@@ -348,7 +352,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .scenario-choices button {
@@ -379,8 +383,8 @@
 }
 
 .compare {
-  margin-top: 14px;
-  padding-top: 11px;
+  margin-top: 11px;
+  padding-top: 9px;
   border-top: 1px solid var(--chrome-border);
 }
 
@@ -431,4 +435,196 @@
   font-size: 10.5px;
   line-height: 1.5;
   color: var(--ink-faint);
+}
+
+/* ---- Resident edit (intervention) -------------------------------------- */
+
+.panel-action--edit {
+  border-color: var(--intervention);
+  color: var(--intervention);
+}
+
+.panel-action--edit:hover:not(:disabled) {
+  background: rgb(63 158 99 / 14%);
+}
+
+.edit {
+  margin-top: 10px;
+  padding: 9px 11px 10px;
+  border: 1px solid var(--intervention);
+  border-radius: 5px;
+  background: rgb(63 158 99 / 12%);
+}
+
+.edit-flag {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--intervention);
+}
+
+.edit-delta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
+  margin: 7px 0 0;
+}
+
+.edit-was {
+  font-size: 13px;
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+
+.edit-arrow {
+  color: var(--ink-faint);
+}
+
+.edit-now {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.edit-drop {
+  font-size: 11px;
+  color: var(--intervention);
+}
+
+.edit-note {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.edit .panel-action {
+  margin-top: 10px;
+}
+
+.edit-assumption {
+  margin: 7px 0 0;
+  padding-top: 7px;
+  border-top: 1px solid rgb(63 158 99 / 35%);
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--ink-faint);
+}
+
+/* ---- Facility names, focus toggle, model info -------------------------- */
+
+.panel-facility {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--ink-muted);
+}
+
+.compare-facility {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 9.5px;
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+.focus-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 9px;
+  padding: 5px 9px;
+  border: 1px solid var(--chrome-border);
+  border-radius: 5px;
+  background: none;
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.focus-toggle:hover {
+  color: var(--ink);
+}
+
+.focus-toggle.is-on {
+  border-color: var(--intervention);
+  background: rgb(63 158 99 / 12%);
+  color: var(--intervention);
+}
+
+.focus-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border: 1px solid currentcolor;
+  border-radius: 50%;
+}
+
+.focus-toggle.is-on .focus-dot {
+  background: var(--intervention);
+}
+
+.how {
+  margin-top: 11px;
+  padding-top: 9px;
+  border-top: 1px solid var(--chrome-border);
+}
+
+.how summary {
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.how summary:hover {
+  color: var(--ink-muted);
+}
+
+.how-lede {
+  margin: 9px 0 0;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+
+.how-lede strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.how-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 10px 0 0;
+  font-size: 10.5px;
+}
+
+.how-fields dt {
+  color: var(--ink-faint);
+}
+
+.how-fields dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+
+.how-warnings {
+  margin: 10px 0 0;
+  padding-left: 14px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+.how-warnings li + li {
+  margin-top: 5px;
 }

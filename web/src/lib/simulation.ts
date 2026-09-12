@@ -116,45 +116,101 @@ export interface ScenarioScene {
   unreachable: UnreachableAgent[];
   candidates: CandidateSite[];
   selectedSiteId: string | null;
+  /**
+   * Pull the mobility-constrained journeys forward and push the rest back.
+   *
+   * Nothing is filtered out: the other journeys stay on screen, faint, so the
+   * comparison is still visible rather than replaced by a different map.
+   */
+  focusMobility: boolean;
 }
 
+const MOBILITY_CONSTRAINED = "mobility_constrained";
+
+const isConstrained = (profile: string) => profile === MOBILITY_CONSTRAINED;
+
 /** Mobility-constrained journeys are drawn apart: they carry the equity story. */
-function routeColor(route: AgentRoute): [number, number, number, number] {
-  return route.profile === "mobility_constrained"
-    ? rgba(palette.intervention, 235)
-    : rgba(palette.simulation, 200);
+function routeColor(
+  route: AgentRoute,
+  focusMobility: boolean,
+): [number, number, number, number] {
+  if (isConstrained(route.profile)) {
+    return rgba(palette.intervention, focusMobility ? 255 : 235);
+  }
+  return rgba(palette.simulation, focusMobility ? 55 : 200);
+}
+
+/** Widths in the same order the colours above imply. */
+function routeWidth(route: AgentRoute, focusMobility: boolean): number {
+  if (!focusMobility) return 11;
+  return isConstrained(route.profile) ? 15 : 5;
 }
 
 export function scenarioLayers(scene: ScenarioScene): Layer[] {
-  const { routes, unreachable, candidates, selectedSiteId } = scene;
+  const { routes, unreachable, candidates, selectedSiteId, focusMobility } = scene;
   const origins = routes
     .map((route) => ({ route, position: route.path[0] }))
     .filter((d): d is { route: AgentRoute; position: Coordinate } => Boolean(d.position));
 
   return [
+    // A dark casing under every route. Routes cross a warm, light map and a
+    // grey slice; a single bright stroke loses its edges against both at
+    // presentation distance, so each one gets an outline to sit in.
+    new PathLayer<AgentRoute>({
+      id: "scenario-routes-casing",
+      data: routes,
+      getPath: (d) => d.path,
+      getColor: (d) =>
+        rgba(palette.chrome, focusMobility && !isConstrained(d.profile) ? 40 : 150),
+      getWidth: (d) => routeWidth(d, focusMobility) + 6,
+      widthMinPixels: focusMobility ? 4 : 8,
+      widthMaxPixels: 26,
+      capRounded: true,
+      jointRounded: true,
+      updateTriggers: {
+        getColor: [focusMobility],
+        getWidth: [focusMobility],
+      },
+    }),
     new PathLayer<AgentRoute>({
       id: "scenario-routes",
       data: routes,
       getPath: (d) => d.path,
-      getColor: routeColor,
-      getWidth: 5,
-      widthMinPixels: 2,
-      widthMaxPixels: 8,
+      getColor: (d) => routeColor(d, focusMobility),
+      getWidth: (d) => routeWidth(d, focusMobility),
+      widthMinPixels: focusMobility ? 3 : 5,
+      widthMaxPixels: 20,
       capRounded: true,
       jointRounded: true,
       pickable: true,
+      updateTriggers: {
+        getColor: [focusMobility],
+        getWidth: [focusMobility],
+      },
     }),
     // Where each reached resident started.
     new ScatterplotLayer<{ route: AgentRoute; position: Coordinate }>({
       id: "scenario-origins",
       data: origins,
       getPosition: (d) => d.position,
-      getFillColor: (d) => routeColor(d.route),
-      getRadius: 9,
-      radiusMinPixels: 3,
-      radiusMaxPixels: 9,
-      stroked: false,
+      getFillColor: (d) => routeColor(d.route, focusMobility),
+      getRadius: (d) =>
+        focusMobility && !isConstrained(d.route.profile) ? 7 : 15,
+      radiusMinPixels: focusMobility ? 3 : 5,
+      radiusMaxPixels: 15,
+      stroked: true,
+      getLineColor: (d) =>
+        rgba(
+          palette.chrome,
+          focusMobility && !isConstrained(d.route.profile) ? 60 : 200,
+        ),
+      lineWidthMinPixels: 1.5,
       pickable: true,
+      updateTriggers: {
+        getFillColor: [focusMobility],
+        getRadius: [focusMobility],
+        getLineColor: [focusMobility],
+      },
     }),
     // Residents who could not reach the site. Kept visible on purpose: they
     // are the point of the equity reveal, not noise to hide (doc 01 §11.3).
@@ -162,12 +218,37 @@ export function scenarioLayers(scene: ScenarioScene): Layer[] {
       id: "scenario-unreachable",
       data: unreachable,
       getPosition: (d) => d.origin,
-      getFillColor: rgba(palette.heat, 210),
-      getRadius: 9,
-      radiusMinPixels: 3,
-      radiusMaxPixels: 9,
-      stroked: false,
+      // A constrained resident who is cut off is the sharpest form of the
+      // equity point, so focus mode keeps these at full strength.
+      getFillColor: (d) =>
+        rgba(
+          palette.heat,
+          focusMobility && !isConstrained(d.profile) ? 70 : 225,
+        ),
+      getRadius: (d) => (focusMobility && !isConstrained(d.profile) ? 7 : 15),
+      radiusMinPixels: focusMobility ? 3 : 5,
+      radiusMaxPixels: 15,
+      stroked: true,
+      getLineColor: rgba(palette.chrome, 200),
+      lineWidthMinPixels: 1.5,
       pickable: true,
+      updateTriggers: {
+        getFillColor: [focusMobility],
+        getRadius: [focusMobility],
+      },
+    }),
+    // A halo marking the site under test, so which proposal is on screen is
+    // readable without looking back at the panel.
+    new ScatterplotLayer<CandidateSite>({
+      id: "scenario-selected-halo",
+      data: candidates.filter((site) => site.id === selectedSiteId),
+      getPosition: (d) => d.location,
+      getFillColor: rgba(palette.intervention, 70),
+      getRadius: 110,
+      radiusMinPixels: 20,
+      radiusMaxPixels: 80,
+      stroked: false,
+      updateTriggers: { getPosition: [selectedSiteId] },
     }),
     new ScatterplotLayer<CandidateSite>({
       id: "scenario-candidates",
@@ -176,17 +257,21 @@ export function scenarioLayers(scene: ScenarioScene): Layer[] {
       getFillColor: (d) =>
         d.id === selectedSiteId
           ? rgba(palette.intervention, 255)
-          : rgba(palette.facility, 190),
-      getRadius: (d) => (d.id === selectedSiteId ? 26 : 16),
-      radiusMinPixels: 6,
-      radiusMaxPixels: 26,
+          : rgba(palette.facility, 200),
+      getRadius: (d) => (d.id === selectedSiteId ? 46 : 24),
+      radiusMinPixels: (selectedSiteId ? 11 : 8) as number,
+      radiusMaxPixels: 46,
       stroked: true,
-      getLineColor: rgba(palette.ink, 230),
-      lineWidthMinPixels: 1.5,
+      getLineColor: (d) =>
+        d.id === selectedSiteId ? rgba(palette.ink, 255) : rgba(palette.chrome, 190),
+      getLineWidth: (d) => (d.id === selectedSiteId ? 4 : 2),
+      lineWidthMinPixels: 2,
       pickable: true,
       updateTriggers: {
         getFillColor: [selectedSiteId],
         getRadius: [selectedSiteId],
+        getLineColor: [selectedSiteId],
+        getLineWidth: [selectedSiteId],
       },
     }),
   ];
