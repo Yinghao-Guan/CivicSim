@@ -15,9 +15,18 @@ import { useEffect, useRef, useState } from "react";
 import maplibregl, { type Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import { CAMERA, addVenueMarker, frameDemoArea } from "@/lib/map";
-import { DEMO_AREA_BOUNDS } from "@/lib/demoArea.generated";
+import BuildingPanel from "@/components/panels/BuildingPanel";
+import {
+  CAMERA,
+  SLICE_SOURCE,
+  addSliceLayers,
+  addVenueMarker,
+  frameDemoArea,
+} from "@/lib/map";
+import { BUILDING_COUNT, DEMO_AREA_BOUNDS } from "@/lib/demoArea.generated";
 import { buildContextStyle } from "@/lib/mapStyle";
+
+import { useSliceInteraction } from "./useSliceInteraction";
 
 interface CityMapProps {
   /** Called once the style has loaded, for layers added in later milestones. */
@@ -29,6 +38,10 @@ export default function CityMap({ onReady }: CityMapProps) {
   const mapRef = useRef<MapLibreMap | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [sliceLoaded, setSliceLoaded] = useState(false);
+  const { selected, clearSelection, attach } = useSliceInteraction();
+  const attachRef = useRef(attach);
+  attachRef.current = attach;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -69,8 +82,12 @@ export default function CityMap({ onReady }: CityMapProps) {
       Object.assign(window, { civicsimMap: map, civicsimStyle: buildContextStyle });
     }
 
+    let detachSlice: (() => void) | undefined;
+
     map.once("load", () => {
+      addSliceLayers(map);
       addVenueMarker(map);
+      detachSlice = attachRef.current(map);
       // Re-frame now that the container has its final size; the constructor
       // fit runs before layout settles on a first paint.
       frameDemoArea(map, false);
@@ -78,7 +95,15 @@ export default function CityMap({ onReady }: CityMapProps) {
       onReady?.(map);
     });
 
+    // The slice is ~2.9 MB, so it lands noticeably after the basemap.
+    const onSourceData = (event: { sourceId?: string; isSourceLoaded?: boolean }) => {
+      if (event.sourceId === SLICE_SOURCE && event.isSourceLoaded) setSliceLoaded(true);
+    };
+    map.on("sourcedata", onSourceData);
+
     return () => {
+      detachSlice?.();
+      map.off("sourcedata", onSourceData);
       // Clear the ref *before* removing. React StrictMode unmounts and
       // remounts within the same tick in development, and MapLibre 5 throws
       // ("no tile manager with ID ...") when a map is torn down while its
@@ -99,7 +124,13 @@ export default function CityMap({ onReady }: CityMapProps) {
   return (
     <div className="map-root">
       <div ref={containerRef} className="map-canvas" />
-      {!ready && !error && <div className="map-status">Loading the neighborhood…</div>}
+      {(!ready || !sliceLoaded) && !error && (
+        <div className="map-status">
+          {ready
+            ? `Loading ${BUILDING_COUNT.toLocaleString("en-US")} buildings…`
+            : "Loading the neighborhood…"}
+        </div>
+      )}
       {error && (
         <div className="map-status map-status--error">
           Basemap tiles failed to load: {error}
@@ -108,6 +139,7 @@ export default function CityMap({ onReady }: CityMapProps) {
           context is affected.
         </div>
       )}
+      {selected && <BuildingPanel building={selected} onClose={clearSelection} />}
       <button
         type="button"
         className="map-reset"

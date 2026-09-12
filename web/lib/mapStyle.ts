@@ -41,6 +41,28 @@ export const contextLayerIds = {
 const MAJOR_ROAD_CLASSES = ["motorway", "trunk", "primary"];
 const MINOR_ROAD_CLASSES = ["secondary", "tertiary", "minor", "service"];
 
+/**
+ * Above this zoom, layer 1's buildings are hidden entirely.
+ *
+ * Inside the demo area layer 2 draws the same buildings from our own data, and
+ * two extrusions of one building fight for depth: the tiles' `render_height`
+ * often disagrees with ours (11 m where we resolved 5 m, for instance), so the
+ * tile version pokes through the slice and shreds its roofs.
+ *
+ * The honest fix is to not draw tile buildings inside the box, but MapLibre
+ * 5.24 offers no way to express that: `within` only supports Point and
+ * LineString features, so it silently matches nothing against building
+ * polygons, and the `clip` layer type does not exist in this version.
+ *
+ * A zoom cut-off works because it costs almost nothing. The demo area is
+ * 1.8 km across, so by zoom ~15.5 the viewport is mostly inside it and there
+ * is little context left to lose; below that, buildings are a couple of pixels
+ * tall and the depth fight is invisible. When the area grows to district scale
+ * (doc 04 §2) our own data becomes PMTiles covering the whole view, and this
+ * cut-off goes away with the conflict.
+ */
+const CONTEXT_BUILDINGS_MAXZOOM = 15.5;
+
 export function buildContextStyle(): StyleSpecification {
   return {
     version: 8,
@@ -173,13 +195,15 @@ export function buildContextStyle(): StyleSpecification {
       {
         // Layer 1's buildings. Extruded so the surrounding city has depth,
         // but pale and semi-transparent so the demo slice stands clear of it.
-        // `hide_3d` marks features OpenMapTiles says not to extrude.
+        // `hide_3d` marks features OpenMapTiles says not to extrude, and
+        // CONTEXT_BUILDINGS_MAXZOOM hands the ground to layer 2 up close.
         id: contextLayerIds.contextBuildings,
         type: "fill-extrusion",
         source: OPENMAPTILES_SOURCE,
         "source-layer": "building",
         filter: ["!=", ["get", "hide_3d"], true],
         minzoom: 13,
+        maxzoom: CONTEXT_BUILDINGS_MAXZOOM,
         paint: {
           "fill-extrusion-color": palette.contextBuilding,
           "fill-extrusion-height": ["coalesce", ["get", "render_height"], 5],

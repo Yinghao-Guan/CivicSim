@@ -66,14 +66,14 @@ web/public/data/     generated artifacts the browser fetches (committed)
 
 ---
 
-### M3 — Demo slice, clickable (layer ②)
+### M3 — Demo slice, clickable (layer ②) ✅ done 2026-09-12
 
 - `web/public/data/buildings.geojson` as a MapLibre `geojson` source rendered with `fill-extrusion`, fetched via `BUILDINGS_URL` from `lib/demoArea.generated.ts`.
 - `promoteId: "building_id"` plus `feature-state` for hover and selection highlighting (doc 03 §2.2).
 - Clicking a building opens a side panel showing its attributes.
 - Palette per doc 02 §6: muted/dark buildings on a warm neutral basemap. A planning tool, not Google Earth.
 
-**Done when:** any slice building can be clicked to reveal its attributes, hover highlights, and layer ② reads as visually distinct from layer ①'s context buildings.
+**Done when:** any slice building can be clicked to reveal its attributes, hover highlights, and layer ② reads as visually distinct from layer ①'s context buildings. *Results: §6.*
 
 ---
 
@@ -99,7 +99,7 @@ May follow M4, but must not be forgotten.
 
 ## 2. Designing for the district-scale expansion
 
-Per doc 03 §4.2, the pressure point at CD 8/9/10 scale is data loading, not the GPU. Keep layer ②'s source behind a thin abstraction in `lib/map.ts` so swapping `geojson` for PMTiles is a local change. The tippecanoe → PMTiles pipeline is the only step that needs POSIX tooling; see §6.
+Per doc 03 §4.2, the pressure point at CD 8/9/10 scale is data loading, not the GPU. Keep layer ②'s source behind a thin abstraction in `lib/map.ts` so swapping `geojson` for PMTiles is a local change. The tippecanoe → PMTiles pipeline is the only step that needs POSIX tooling; see §7.
 
 ---
 
@@ -147,7 +147,7 @@ This box is **50% larger than the 1.5–2 km² doc 03 §3.1 originally specified
 
 *(measured across the full 3.5 × 3.5 km survey area; 95.7% within the chosen box)*
 
-Values are fine-grained decimals — 4.0, 4.2, 3.8, 3.9 m and so on — characteristic of the LA County LARIAC LiDAR import rather than hand-entered estimates. **The §7 risk of a uniform 5 m slab field is retired: OSM is a sufficient building source and no switch to a separate LARIAC dataset is needed.** The fallback chain stays in the M1 script as a safety net, but its `building:levels` step will almost never fire.
+Values are fine-grained decimals — 4.0, 4.2, 3.8, 3.9 m and so on — characteristic of the LA County LARIAC LiDAR import rather than hand-entered estimates. **The §8 risk of a uniform 5 m slab field is retired: OSM is a sufficient building source and no switch to a separate LARIAC dataset is needed.** The fallback chain stays in the M1 script as a safety net, but its `building:levels` step will almost never fire.
 
 Height distribution:
 
@@ -346,7 +346,64 @@ With the demo area framed:
 
 ---
 
-## 6. Cross-platform conventions
+## 6. M3 results
+
+**Completed 2026-09-12.** Clicking any building in the slice opens a panel of its attributes; hover highlights; the slice reads as clearly distinct from layer ①.
+
+### 6.1 Files
+
+| File | Role |
+| --- | --- |
+| `web/lib/map.ts` | `sliceSourceSpec()`, `addSliceLayers()`, `SLICE_HEIGHT_EXAGGERATION` |
+| `web/components/map/useSliceInteraction.ts` | Hover and selection via `feature-state` |
+| `web/components/panels/BuildingPanel.tsx` | The side panel |
+
+`sliceSourceSpec()` is the seam doc 04 §2 asks for: when the area grows to district scale, only that function and the layer's `source-layer` change — the interaction code does not.
+
+### 6.2 Verified
+
+| Check | Result |
+| --- | --- |
+| Slice features rendered | 4,911 in the default view |
+| `promoteId` | working — MapLibre's feature id equals our `building_id` |
+| Candidate facilities in view | 47, drawn in the facility colour |
+| Hover | `feature-state` `hover: true`, cursor `pointer` |
+| Click | `feature-state` `selected: true`, panel opens with the right building |
+| Deselect | background click and <kbd>Esc</kbd> both clear state and panel |
+| Panel provenance | shows real height 3.8 m, "measured (LiDAR)", "drawn at 2× for legibility" |
+
+Hover and selection go through `feature-state` rather than React state: re-styling one feature that way touches only its GPU attributes, where re-rendering a 4,887-feature source on every mouse move would not hold 60fps. React only ever hears about the selected building.
+
+### 6.3 Vertical exaggeration: 2×
+
+Chosen by looking at 1×, 2× and 3× under the same camera.
+
+| Factor | Median building drawn as | Reads as |
+| --- | --- | --- |
+| 1× | 4.4 m | A flat carpet; a house and a warehouse look the same |
+| **2×** | **8.8 m** | **Massing separates — a school campus lifts out of the houses around it, and the area still looks low-rise** |
+| 3× | 13.2 m | A different, denser neighborhood |
+
+3× was rejected because a single-storey house reading as four storeys works against the heat-vulnerability story the demo is making. The panel always reports the true height and says when the drawing is exaggerated (doc 01 §13.4).
+
+### 6.4 The panel omits accessibility
+
+Per the M1 finding in §4.4, no building in the area carries an OSM `wheelchair` tag, so the field would read "unknown" every time. Instead of a permanently empty row, the panel carries one footnote saying the data does not exist here and that access comes from street-graph edges in a later milestone.
+
+### 6.5 Layers ① and ② were drawing the same buildings
+
+Inside the demo area both layers extruded the same footprints. The tiles' `render_height` frequently disagrees with ours — 11 m where we resolved 5 m — so the tile version punched through the slice and shredded its roofs into radiating triangles, clearly visible on the Diego Rivera campus at zoom 17.
+
+Two attempted fixes that do **not** work in MapLibre 5.24, recorded so nobody retries them:
+
+- **`["!", ["within", demoAreaPolygon]]` as a filter on the tile layer.** `within` supports only Point and LineString features, so it silently matches nothing against building polygons. A controlled test at a fixed camera gave 18 rendered features with and without the filter — identical. It is worth stressing that this failure is *silent*: the filter looks right and does nothing.
+- **A `clip` layer.** The layer type does not exist in this version; MapLibre rejects the style with "expected one of [fill, line, symbol, circle, heatmap, fill-extrusion, raster, hillshade, color-relief, background]".
+
+What shipped is a zoom cut-off: layer ① stops at zoom 15.5. It costs little, because the demo area is 1.8 km across, so by that zoom the viewport is mostly inside it and there is little context left to lose, while below it buildings are a couple of pixels tall and the depth conflict is invisible. The cut-off disappears on its own when the district-scale expansion (§2) turns our own data into PMTiles covering the whole view.
+
+---
+
+## 7. Cross-platform conventions
 
 The team mixes macOS and Windows, so the build must work on both without per-machine instructions.
 
@@ -358,11 +415,11 @@ The team mixes macOS and Windows, so the build must work on both without per-mac
 
 ---
 
-## 7. Risks
+## 8. Risks
 
 | Risk | Response |
 | --- | --- |
 | ~~Height coverage in the slice is too low, so every building renders as a ~5 m slab~~ | **Retired by M0:** coverage is 96.2% with LiDAR-derived values. OSM is sufficient; no LARIAC switch needed. |
-| Relief is too shallow to read as 2.5D — median building is 4.4 m and 99% are under 9.4 m | Not a data problem; a presentation one. M3 decides whether to apply vertical exaggeration once the slice is visible on screen (§3.3). |
+| ~~Relief is too shallow to read as 2.5D — median building is 4.4 m and 99% are under 9.4 m~~ | **Settled in M3:** 2× vertical exaggeration, chosen against 1× and 3× on screen. The panel still reports true heights (§6.3). |
 | ~~The bbox reaches into the industrial corridor, making later synthetic-population placement unrealistic~~ | **Retired by M0:** the corridor is 2.16 km east, outside the box. Industrial/warehouse buildings inside are 6.7% (§3.5). |
 | `interleaved: true` misbehaves with a particular MapLibre/deck.gl version pair | M4 is a separate stage precisely to surface this early. Fallback is `interleaved: false` — occlusion is lost and the visuals degrade, but nothing is blocked. |

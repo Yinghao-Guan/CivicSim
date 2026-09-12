@@ -7,9 +7,15 @@
  * (doc 04 section 2).
  */
 
-import type { LngLatBoundsLike, Map as MapLibreMap } from "maplibre-gl";
+import type {
+  ExpressionSpecification,
+  LngLatBoundsLike,
+  Map as MapLibreMap,
+  SourceSpecification,
+} from "maplibre-gl";
 
-import { DEMO_AREA_BOUNDS, VENUE } from "./demoArea.generated";
+import { BUILDINGS_URL, DEMO_AREA_BOUNDS, VENUE } from "./demoArea.generated";
+import { contextLayerIds } from "./mapStyle";
 import { palette } from "./palette";
 
 /**
@@ -105,4 +111,89 @@ export function addVenueMarker(map: MapLibreMap): void {
       "text-halo-width": 1.8,
     },
   });
+}
+
+/* ---------------------------------------------------------------------- */
+/* Layer 2 — the demo slice                                               */
+/* ---------------------------------------------------------------------- */
+
+export const SLICE_SOURCE = "slice";
+export const sliceLayerIds = { buildings: "slice-buildings" } as const;
+
+/**
+ * Vertical exaggeration applied to slice building heights.
+ *
+ * The neighborhood is genuinely low-rise: the median building is 4.4 m and 99%
+ * are under 9.4 m (doc 04 §3.3), so at true scale the extrusion is almost
+ * flat and a house is indistinguishable from a warehouse.
+ *
+ * 2 was chosen against 1 and 3 side by side. It is enough for massing to read
+ * -- a school campus separates from the houses around it -- while the area
+ * still looks like the low-rise neighborhood it is. At 3 a single-storey house
+ * reads as four storeys, which works against the heat-vulnerability story the
+ * demo is making.
+ *
+ * The side panel always reports the real height and says when the drawing is
+ * exaggerated, per doc 01 §13.4 on provenance.
+ */
+export const SLICE_HEIGHT_EXAGGERATION: number = 2;
+
+/**
+ * The layer-2 source.
+ *
+ * Isolated here because doc 04 §2 expects this to become PMTiles when the area
+ * grows to district scale — at which point only this function and the layer's
+ * `source-layer` change, not the interaction code.
+ *
+ * `promoteId` is what makes the rest work: it lifts our own `building_id` into
+ * MapLibre's feature id, which `feature-state` needs for hover and selection.
+ * Tile-provided buildings have no such id, which is exactly why doc 03 §2.1
+ * splits the city into separate layers.
+ */
+export function sliceSourceSpec(): SourceSpecification {
+  return {
+    type: "geojson",
+    data: BUILDINGS_URL,
+    promoteId: "building_id",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors (ODbL)',
+  };
+}
+
+/** Selected beats hover beats candidate, so a click always reads clearly. */
+const sliceColor: ExpressionSpecification = [
+  "case",
+  ["boolean", ["feature-state", "selected"], false],
+  palette.sliceBuildingSelected,
+  ["boolean", ["feature-state", "hover"], false],
+  palette.sliceBuildingHover,
+  ["get", "candidate_eligible"],
+  palette.facility,
+  palette.sliceBuilding,
+];
+
+/** Add the demo slice. Drawn under labels so street names stay readable. */
+export function addSliceLayers(map: MapLibreMap): void {
+  if (map.getSource(SLICE_SOURCE)) return;
+
+  map.addSource(SLICE_SOURCE, sliceSourceSpec());
+
+  map.addLayer(
+    {
+      id: sliceLayerIds.buildings,
+      type: "fill-extrusion",
+      source: SLICE_SOURCE,
+      paint: {
+        "fill-extrusion-color": sliceColor,
+        "fill-extrusion-height":
+          SLICE_HEIGHT_EXAGGERATION === 1
+            ? ["get", "height"]
+            : ["*", ["get", "height"], SLICE_HEIGHT_EXAGGERATION],
+        "fill-extrusion-base": 0,
+        "fill-extrusion-opacity": 0.95,
+        "fill-extrusion-vertical-gradient": true,
+      },
+    },
+    contextLayerIds.firstLabel,
+  );
 }
