@@ -1,0 +1,72 @@
+# ---- Environment variables ----
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# ---- Scratch / personal notes ----
+temp/
+
+# ---- JetBrains (WebStorm, PyCharm, IntelliJ, ...) ----
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# ---- macOS ----
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+
+# ---- Windows ----
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ---- Node / Next.js frontend ----
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+.vercel/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+coverage/
+*.tsbuildinfo
+.eslintcache
+
+# ---- Python / FastAPI backend ----
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# ---- Local / generated simulation data ----
+backend/data/*.pkl
+*.pkl
+
+# ---- Logs & editor swap files ----
+*.log
+*.swp
+*.swo
