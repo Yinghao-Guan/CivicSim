@@ -13,6 +13,7 @@ import pytest
 from simulation.agents import Agent
 from simulation.routing import (
     ACCESSIBLE_ATTR,
+    HEAT_ATTR,
     WEIGHT_ATTR,
     Route,
     Unreachable,
@@ -22,7 +23,7 @@ from simulation.routing import (
 
 DESTINATION = "cooling_center"
 
-# (u, v, travel_time_minutes, wheelchair_accessible)
+# (u, v, travel_time_minutes, wheelchair_accessible, heat_exposure_minutes)
 #
 #   stair route     origin_a - n1 - n2 - cooling_center        6.0 min
 #                              (n1-n2 is stairs, not accessible)
@@ -30,15 +31,15 @@ DESTINATION = "cooling_center"
 #   origin_b sits behind a stair-only connection at n6-n2
 #   island_park has no edges at all
 EDGES = (
-    ("origin_a", "n1", 2.0, True),
-    ("n1", "n2", 2.0, False),  # stairs: on the shortest path
-    ("n2", "cooling_center", 2.0, True),
-    ("origin_a", "n3", 3.0, True),
-    ("n3", "n4", 3.0, True),
-    ("n4", "n5", 3.0, True),
-    ("n5", "cooling_center", 3.0, True),
-    ("origin_b", "n6", 1.0, True),
-    ("n6", "n2", 1.0, False),  # stairs: origin_b's only way out
+    ("origin_a", "n1", 2.0, True, 1.0),
+    ("n1", "n2", 2.0, False, 1.0),  # stairs: on the shortest path
+    ("n2", "cooling_center", 2.0, True, 1.0),
+    ("origin_a", "n3", 3.0, True, 2.0),
+    ("n3", "n4", 3.0, True, 2.0),
+    ("n4", "n5", 3.0, True, 2.0),
+    ("n5", "cooling_center", 3.0, True, 2.0),
+    ("origin_b", "n6", 1.0, True, 0.5),
+    ("n6", "n2", 1.0, False, 0.5),  # stairs: origin_b's only way out
 )
 
 ISOLATED_NODES = ("island_park",)
@@ -48,8 +49,12 @@ ISOLATED_NODES = ("island_park",)
 def graph():
     g = nx.Graph()
     g.add_nodes_from(ISOLATED_NODES)
-    for u, v, travel_time, accessible in EDGES:
-        g.add_edge(u, v, **{WEIGHT_ATTR: travel_time, ACCESSIBLE_ATTR: accessible})
+    for u, v, travel_time, accessible, heat in EDGES:
+        g.add_edge(
+            u,
+            v,
+            **{WEIGHT_ATTR: travel_time, ACCESSIBLE_ATTR: accessible, HEAT_ATTR: heat},
+        )
     return g
 
 

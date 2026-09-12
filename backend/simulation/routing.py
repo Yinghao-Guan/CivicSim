@@ -19,6 +19,11 @@ WEIGHT_ATTR = "travel_time"
 #: A missing value is treated as accessible.
 ACCESSIBLE_ATTR = "wheelchair_accessible"
 
+#: Edge attribute holding modeled unshaded heat exposure in minutes.
+#: Every edge of a walking graph must declare it: silently treating a missing
+#: value as zero would understate exposure rather than report a data gap.
+HEAT_ATTR = "heat_exposure"
+
 #: Reason values reported for agents that cannot reach the destination.
 #: These match docs/03-api-contract.md section 9.
 REASON_ACCESSIBILITY_BARRIER = "accessibility_barrier"
@@ -33,6 +38,7 @@ class Route:
     profile: str
     path: tuple[Hashable, ...]
     travel_time: float
+    heat_exposure: float
 
 
 @dataclass(frozen=True)
@@ -94,7 +100,19 @@ def route_agent(
         profile=agent.profile,
         path=tuple(path),
         travel_time=travel_time,
+        heat_exposure=path_heat_exposure(graph, path),
     )
+
+
+def path_heat_exposure(graph: nx.Graph, path: list[Hashable]) -> float:
+    """Total modeled heat exposure in minutes along `path`."""
+    try:
+        return nx.path_weight(graph, path, weight=HEAT_ATTR)
+    except KeyError as exc:
+        raise ValueError(
+            f"Walking graph edge is missing the {HEAT_ATTR!r} attribute; "
+            "every edge must declare its modeled heat exposure."
+        ) from exc
 
 
 def route_agents(
