@@ -1,20 +1,23 @@
 # CivicSim web
 
-Interactive frontend for the CivicSim neighborhood decision studio. The experience is organized as four stages sharing one persistent WebGL canvas:
+Interactive frontend for the CivicSim neighborhood decision studio: Next.js (App Router, TypeScript), a React Three Fiber hero, and MapLibre GL JS with an interleaved deck.gl overlay for the real neighborhood. Next renders the product; the FastAPI backend in `../backend` owns every simulation number.
 
 - `/` — opening hero
 - `/setup` — guided experiment briefing
 - `/simulate` — live simulation choreography
 - `/results` — living comparison workspace
+- `/lab` — integration workbench: the live map and scenario panel on their own
 
 ## Local development
 
 ```bash
 npm install
-npm run dev
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Start the backend for live results (`cd ../backend && uv run uvicorn main:app --reload`; it serves `http://localhost:8000`).
+
+`npm run build` writes to the same `.next/` the dev server uses — stop the dev server first.
 
 ## Commands
 
@@ -22,7 +25,37 @@ Open [http://localhost:3000](http://localhost:3000).
 - `npm run lint` — run ESLint
 - `npm run build` — create and type-check a production build
 
-The current UI uses illustrative scenario data and labels it as such. It attempts to call `http://localhost:8000/simulate` (override with `NEXT_PUBLIC_SIM_API_URL`) and falls back to a fixed, precomputed demo run after 1.5 seconds. The procedural Three.js city and its SVG fallback are local, so the core presentation does not depend on network tiles.
+## Flags
+
+Copy `.env.example` to `.env.local` and edit it. `NEXT_PUBLIC_*` values are inlined at build time, so **restart the dev server** after a change.
+
+| Flag | Default | Effect |
+| --- | --- | --- |
+| `NEXT_PUBLIC_OFFLINE_TILES` | `off` | `on` serves the basemap from `public/offline` instead of the network |
+| `NEXT_PUBLIC_OCCLUSION_PROBE` | `on` | `off` hides the M4 probe line |
+| `NEXT_PUBLIC_MAX_PIXEL_RATIO` | `2` | Drop to `1.5` if pitched views stutter on a high-DPI display |
+
+For demo day, follow the runbook in [`../docs/05-map-milestone-plan.md`](../docs/05-map-milestone-plan.md) §8.4 — the step that matters is turning Wi-Fi **off** and reloading.
+
+## Layout
+
+```text
+src/app/                    routes; /lab keeps the map workbench and its own CSS
+src/components/scene/       R3F hero and scenario twin
+src/components/map/         MapView (ssr:false wrapper) -> CityMap (the map itself)
+src/components/panels/      map workbench panels
+src/lib/api.ts, contract.ts FastAPI client and a mirror of docs/03-api-contract.md
+src/lib/useScenarios.ts     fetches, caches and selects backend scenarios
+src/lib/map*.ts, simulation.ts  basemap style, slice layers, deck.gl overlay
+src/lib/demoArea.generated.ts   GENERATED — edit scripts/demo_area.py instead
+public/data/                generated artifacts the browser fetches
+public/offline/             offline basemap package (42 tiles + glyphs)
+```
+
+## Two rules that are easy to get wrong
+
+- **MapLibre and deck.gl are browser-only.** Map components need `"use client"` and must be reached through `MapView`, which loads them with `dynamic(..., { ssr: false })`. See doc 04 §2.3.5.
+- **`src/lib/demoArea.generated.ts` is generated.** The demo area is defined once in `scripts/demo_area.py`; run `python scripts/build_buildings.py` to regenerate.
 
 ## Hero visual
 

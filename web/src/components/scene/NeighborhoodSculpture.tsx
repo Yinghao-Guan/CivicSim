@@ -8,7 +8,7 @@ import { glslColor, thermalGlsl } from "@/components/scene/glsl-color";
 import { heroSiteCycle } from "@/lib/animation/hero-site-cycle";
 import { seededRandom } from "@/lib/animation/seeded-random";
 import { HERO_PALETTE } from "@/lib/hero-palette";
-import type { SiteId } from "@/lib/types";
+import type { SiteId } from "@/lib/experience-types";
 
 type Point = [number, number, number];
 type Segment = [Point, Point];

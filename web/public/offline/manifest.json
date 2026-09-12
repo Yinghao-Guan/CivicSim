@@ -1,0 +1,24 @@
+{
+  "milestone": "M5",
+  "upstream": "OpenFreeMap planet tiles (OpenMapTiles schema)",
+  "upstream_version": "20260906_080001_pt",
+  "license": "Map data from OpenStreetMap contributors, ODbL",
+  "bbox_swne": [
+    33.981,
+    -118.2645,
+    33.996,
+    -118.245
+  ],
+  "minzoom": 11,
+  "maxzoom": 14,
+  "buffer_tiles": 1,
+  "tile_count": 42,
+  "fontstacks": [
+    "Noto Sans Regular",
+    "Noto Sans Bold"
+  ],
+  "glyph_ranges": [
+    "0-255",
+    "256-511"
+  ]
+}

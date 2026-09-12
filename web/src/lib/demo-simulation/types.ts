@@ -1,4 +1,4 @@
-import type { Lens, Objective, SiteId, SiteResult } from "@/lib/types";
+import type { Lens, Objective, SiteId, SiteResult } from "@/lib/experience-types";
 
 export type SimulationConfig = {
   budget: number;

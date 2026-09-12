@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { useExperience } from "@/components/experience/ExperienceProvider";
 import SceneErrorBoundary from "@/components/experience/SceneErrorBoundary";
 import SceneFallback from "@/components/scene/SceneFallback";
-import type { VisualStage } from "@/lib/types";
+import type { VisualStage } from "@/lib/experience-types";
 
 const TwinCanvas = dynamic(() => import("@/components/scene/TwinCanvas"), {
   ssr: false,
@@ -30,6 +30,9 @@ export default function ExperienceShell({ children }: { children: React.ReactNod
     const isHeroExit = pathname === "/" && visualStage === "entering";
     if (nextStage && visualStage !== nextStage && !isHeroExit) setVisualStage(nextStage);
   }, [pathname, setVisualStage, visualStage]);
+
+  // /lab is the integration workbench: the live map and scenario panel, without the twin.
+  if (pathname.startsWith("/lab")) return children;
 
   return (
     <div className={`experience-shell stage-${visualStage}`}>

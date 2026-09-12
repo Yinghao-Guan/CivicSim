@@ -1,4 +1,4 @@
-import type { SiteId } from "@/lib/types";
+import type { SiteId } from "@/lib/experience-types";
 
 // The hero sculpture lives in the persistent canvas while its caption lives in the
 // route layer, so the candidate currently being tested is shared through a tiny store.

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 import { seededRandom } from "@/lib/animation/seeded-random";
-import type { SiteId } from "@/lib/types";
+import type { SiteId } from "@/lib/experience-types";
 
 export type BuildingDatum = {
   position: [number, number, number];

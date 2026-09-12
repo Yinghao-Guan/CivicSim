@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 import { RECOMMENDATION_BY_LENS } from "@/data/demo-scenario";
-import type { Lens, Objective, ScenarioState, SiteId, VisualStage } from "@/lib/types";
+import type { Lens, Objective, ScenarioState, SiteId, VisualStage } from "@/lib/experience-types";
 
 type ExperienceContextValue = ScenarioState & {
   setBudget: (value: 300 | 500 | 700) => void;

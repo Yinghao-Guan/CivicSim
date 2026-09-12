@@ -5,7 +5,7 @@ import { useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import { BLOCKED_SEGMENTS, SITE_POSITIONS, SITE_ROUTES } from "@/data/twin-layout";
-import type { Lens, SiteId, VisualStage } from "@/lib/types";
+import type { Lens, SiteId, VisualStage } from "@/lib/experience-types";
 
 function CityGrid() {
   return (

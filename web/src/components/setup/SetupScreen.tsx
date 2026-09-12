@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import Brand from "@/components/experience/Brand";
 import { useExperience } from "@/components/experience/ExperienceProvider";
 import { OBJECTIVE_LABELS, SITE_NAMES } from "@/data/demo-scenario";
-import type { Objective, SiteId } from "@/lib/types";
+import type { Objective, SiteId } from "@/lib/experience-types";
 
 const objectives: { id: Objective; label: string; note: string }[] = [
   { id: "access", label: "Total access", note: "Reach the most residents" },

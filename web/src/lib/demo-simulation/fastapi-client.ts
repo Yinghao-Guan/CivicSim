@@ -1,5 +1,5 @@
 import { SITE_RESULTS } from "@/data/demo-scenario";
-import type { SimulationConfig, SimulationPayload } from "@/lib/simulation/types";
+import type { SimulationConfig, SimulationPayload } from "@/lib/demo-simulation/types";
 
 const API_URL = process.env.NEXT_PUBLIC_SIM_API_URL ?? "http://localhost:8000";
 

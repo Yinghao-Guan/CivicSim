@@ -1,4 +1,4 @@
-import type { Lens, Objective, SiteId, SiteResult } from "@/lib/types";
+import type { Lens, Objective, SiteId, SiteResult } from "@/lib/experience-types";
 
 export const SITE_NAMES: Record<SiteId, string> = {
   a: "South Park Recreation Center",

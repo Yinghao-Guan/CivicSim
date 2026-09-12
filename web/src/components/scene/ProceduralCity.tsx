@@ -5,7 +5,7 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import { BUILDINGS } from "@/data/twin-layout";
-import type { VisualStage } from "@/lib/types";
+import type { VisualStage } from "@/lib/experience-types";
 
 export default function ProceduralCity({ stage }: { stage: VisualStage }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);

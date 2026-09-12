@@ -3,7 +3,7 @@
 **Status:** Accepted direction for the hackathon MVP
 **Relationship to other docs:** This document makes concrete, scoped decisions within the boundaries set by [`01-product-concept.md`](./01-product-concept.md) — specifically its suggested stack (§19), prototype boundary (§18), and development roadmap (§24, Phase 0–1). Where the concept doc lists multiple options (e.g. MapLibre/deck.gl *or* CesiumJS; PostgreSQL/PostGIS as a "natural" store), this document picks one for the hackathon and explains why.
 
-> For how the 2.5D city is layered, which demo area we use, and hardware/performance notes, see [`03-map-rendering-and-demo-area.md`](./03-map-rendering-and-demo-area.md).
+> For how the 2.5D city is layered, which demo area we use, and hardware/performance notes, see [`04-map-rendering-and-demo-area.md`](./04-map-rendering-and-demo-area.md).
 
 ---
 

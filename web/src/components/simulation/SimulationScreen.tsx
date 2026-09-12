@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import Brand from "@/components/experience/Brand";
 import { useExperience } from "@/components/experience/ExperienceProvider";
 import { SIMULATION_STAGES } from "@/data/demo-scenario";
-import { runSimulation } from "@/lib/simulation/client";
+import { runSimulation } from "@/lib/demo-simulation/client";
 
 export default function SimulationScreen() {
   const router = useRouter();

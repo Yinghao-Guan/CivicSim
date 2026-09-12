@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import Brand from "@/components/experience/Brand";
 import { useExperience } from "@/components/experience/ExperienceProvider";
 import { LENS_LABELS, OBJECTIVE_LABELS, SITE_NAMES, SITE_RESULTS } from "@/data/demo-scenario";
-import type { Lens, SiteId } from "@/lib/types";
+import type { Lens, SiteId } from "@/lib/experience-types";
 
 const lenses: { id: Lens; label: string; icon: typeof Users }[] = [
   { id: "all", label: "All residents", icon: Users },

@@ -12,7 +12,7 @@ import FlowingCityGrid from "@/components/scene/FlowingCityGrid";
 import NeighborhoodSculpture from "@/components/scene/NeighborhoodSculpture";
 import ProceduralCity from "@/components/scene/ProceduralCity";
 import SceneFallback from "@/components/scene/SceneFallback";
-import type { VisualStage } from "@/lib/types";
+import type { VisualStage } from "@/lib/experience-types";
 
 const cameraTargets: Record<VisualStage, { position: THREE.Vector3; lookAt: THREE.Vector3 }> = {
   hero: { position: new THREE.Vector3(0, 6.5, 16), lookAt: new THREE.Vector3(0, 0, 0) },
