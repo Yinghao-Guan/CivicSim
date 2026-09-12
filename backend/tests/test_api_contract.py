@@ -318,3 +318,13 @@ def test_store_refuses_to_replace_a_canonical_scenario():
         store.put("site_b", result)
 
     assert store.get("site_b") == result
+
+
+def test_routes_are_drawn_along_streets_from_origin_to_site(client):
+    """Paths follow real streets but still start and end where the model says."""
+    body = client.post("/simulate", json={"cooling_center": "site_c"}).json()
+    site_c = site("site_c")
+
+    for route in body["routes"]:
+        assert tuple(route["path"][-1]) == site_c.location
+    assert any(len(route["path"]) > 3 for route in body["routes"])

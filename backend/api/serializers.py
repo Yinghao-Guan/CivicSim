@@ -18,6 +18,7 @@ from api.schemas import (
     UnreachableAgentModel,
 )
 from data.demo_neighborhood import MODEL_VERSION, POPULATION_VERSION, location
+from data.street_geometry import edge_geometry, metres, walk_geometry
 from simulation.heat import StreetHeat
 from simulation.metrics import Metrics
 from simulation.scenarios import CandidateSite, ScenarioResult
@@ -29,10 +30,6 @@ WALK_MODE = "walk"
 #: Street heat is sampled about this often along each segment, so the map can
 #: draw a continuous field rather than one dot per street.
 HEAT_SAMPLE_SPACING_M = 40.0
-
-#: Metres per degree near the demo area (latitude ~34 N).
-_M_PER_DEG_LON = 92_200.0
-_M_PER_DEG_LAT = 110_900.0
 
 #: The cohort is enumerated rather than sampled, so no seed is consumed yet.
 #: Reported as null rather than inventing a number that nothing used.
@@ -101,36 +98,42 @@ def _route(route) -> RouteModel:
         mode=WALK_MODE,
         travel_time=route.travel_time,
         heat_exposure=route.heat_exposure,
-        path=[location(node) for node in route.path],
+        # Drawn along real streets; the travel time above is still the model's.
+        path=walk_geometry(route.path),
     )
 
 
 def _heatmap(segments: Sequence[StreetHeat]) -> list[HeatmapPointModel]:
-    """Sample each street's heat intensity along its drawn line.
+    """Sample each segment's heat intensity along its drawn street line.
 
-    Samples sit at the middle of equal steps, so two streets meeting at a node
+    Samples sit at the middle of equal steps, so two segments meeting at a node
     never stack a point on the junction. The weight is the segment's intensity
     unchanged; only positions are generated here.
     """
     points: list[HeatmapPointModel] = []
     for segment in segments:
-        (lon_a, lat_a), (lon_b, lat_b) = location(segment.u), location(segment.v)
-        length = math.hypot(
-            (lon_b - lon_a) * _M_PER_DEG_LON, (lat_b - lat_a) * _M_PER_DEG_LAT
-        )
-        steps = max(1, math.ceil(length / HEAT_SAMPLE_SPACING_M))
+        line = edge_geometry(segment.u, segment.v)
+        lengths = [metres(a, b) for a, b in zip(line, line[1:])]
+        total = sum(lengths)
+        steps = max(1, math.ceil(total / HEAT_SAMPLE_SPACING_M))
         for step in range(steps):
-            t = (step + 0.5) / steps
             points.append(
                 HeatmapPointModel(
-                    position=(
-                        round(lon_a + (lon_b - lon_a) * t, 6),
-                        round(lat_a + (lat_b - lat_a) * t, 6),
-                    ),
+                    position=_along(line, lengths, total * (step + 0.5) / steps),
                     weight=round(segment.intensity, 4),
                 )
             )
     return points
+
+
+def _along(line, lengths, distance) -> tuple[float, float]:
+    """The point `distance` metres along a polyline."""
+    for index, ((a, b), length) in enumerate(zip(zip(line, line[1:]), lengths)):
+        if distance <= length or index == len(lengths) - 1:
+            t = 0.0 if length == 0 else min(1.0, distance / length)
+            return (round(a[0] + (b[0] - a[0]) * t, 6), round(a[1] + (b[1] - a[1]) * t, 6))
+        distance -= length
+    return (round(line[-1][0], 6), round(line[-1][1], 6))
 
 
 def _unreachable(unreachable) -> UnreachableAgentModel:

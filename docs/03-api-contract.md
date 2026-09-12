@@ -440,6 +440,8 @@ mobility_constrained
 transit_dependent
 ```
 
+**As implemented (2026-09-12):** `path` is drawn along real OpenStreetMap streets (`backend/data/streets.json`, built by `scripts/build_streets.py`). Each modeled edge becomes the shortest street walk between its two node locations; `travel_time`, `heat_exposure` and accessibility still come from the modeled graph, so the drawn line is presentation only.
+
 P0 routing may use walking only. Lightweight/preprocessed transit is a later P1 enhancement; full or real-time transit simulation is out of scope unless explicitly approved.
 
 ---
@@ -493,7 +495,7 @@ If populated later, use:
 
 `weight` is normalized for visualization and does not itself represent an official city measurement.
 
-**As implemented (2026-09-12):** the backend populates `heatmap` from the walking graph. Each street segment's weight is its modeled heat exposure divided by its travel time — the share of that walk spent in unshaded heat, 0.0–1.0 — sampled roughly every 40 m along the segment's drawn line. Heat is a property of the neighborhood, so the baseline and every candidate return the same points. The schema is unchanged.
+**As implemented (2026-09-12):** the backend populates `heatmap` from the walking graph. Each street segment's weight is its modeled heat exposure divided by its travel time — the share of that walk spent in unshaded heat, 0.0–1.0 — sampled roughly every 40 m along the segment's street-following drawn line. Heat is a property of the neighborhood, so the baseline and every candidate return the same points. The schema is unchanged.
 
 ---
 
