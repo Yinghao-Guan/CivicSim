@@ -507,6 +507,11 @@ a { text-decoration: none; }
 .studio-assumptions button { padding: 0; color: var(--studio-body); background: none; font-size: 11.5px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .studio-assumptions ul { margin-top: 8px; padding-left: 16px; color: var(--studio-quiet); font-size: 11px; line-height: 1.5; }
 
+.studio-venue { display: flex; flex-direction: column; align-items: center; padding: 5px 9px 6px; border-radius: 7px; color: #f7f5ef; background: #1a1917; font-family: var(--font-geist-sans), sans-serif; line-height: 1.15; pointer-events: none; box-shadow: 0 10px 20px -12px rgba(0, 0, 0, .6); }
+.studio-venue::after { content: ""; position: absolute; bottom: -5px; left: 50%; width: 10px; height: 10px; background: #1a1917; transform: translateX(-50%) rotate(45deg); }
+.studio-venue strong { position: relative; z-index: 1; font-size: 11.5px; font-weight: 600; }
+.studio-venue span { position: relative; z-index: 1; color: #b9b5ab; font-family: var(--font-geist-mono), monospace; font-size: 8.5px; letter-spacing: .08em; text-transform: uppercase; }
+
 .studio-marker { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; cursor: pointer; transition: opacity .4s; }
 /* MapLibre drives marker opacity inline, so hide with visibility. */
 .studio-marker.is-hidden { visibility: hidden; }

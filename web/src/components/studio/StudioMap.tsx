@@ -7,10 +7,10 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef, useState } from "react";
 
 import type { AgentRoute, CandidateSite, Coordinate, HeatmapPoint, SimulationResponse, UnreachableAgent } from "@/lib/contract";
-import { DEMO_AREA_BOUNDS } from "@/lib/demoArea.generated";
+import { DEMO_AREA_BOUNDS, VENUE } from "@/lib/demoArea.generated";
 import { MAX_PIXEL_RATIO } from "@/lib/map";
 import { buildContextStyle } from "@/lib/mapStyle";
-import { STUDIO_COLORS, addHeatField, addStudioSlice, boundsOf, restyleContext } from "@/lib/studio-map";
+import { STUDIO_COLORS, addHeatField, addStudioSlice, boundsOf, paintCandidates, restyleContext } from "@/lib/studio-map";
 
 export type StudioStage = "brief" | "sites" | "running" | "results";
 export type StudioLens = "all" | "heat_vulnerable" | "mobility_constrained";
@@ -115,6 +115,12 @@ export default function StudioMap({ stage, candidates, heatmap, scenario, focusS
     resize.observe(container.current);
     const siteMarkers = markers.current;
 
+    // The venue we are presenting from stays labeled on every step.
+    const venue = document.createElement("div");
+    venue.className = "studio-venue";
+    venue.innerHTML = "<strong>The Beehive</strong><span>VISION HACK venue</span>";
+    const venueMarker = new maplibregl.Marker({ element: venue, anchor: "bottom", offset: [0, -18] }).setLngLat(VENUE.lngLat).addTo(map);
+
     map.once("load", () => {
       restyleContext(map);
       addStudioSlice(map);
@@ -126,6 +132,7 @@ export default function StudioMap({ stage, candidates, heatmap, scenario, focusS
 
     return () => {
       resize.disconnect();
+      venueMarker.remove();
       siteMarkers.forEach((marker) => marker.remove());
       siteMarkers.clear();
       overlayRef.current = null;
@@ -155,6 +162,10 @@ export default function StudioMap({ stage, candidates, heatmap, scenario, focusS
       element.classList.toggle("is-active", site.id === focusSiteId);
       element.classList.toggle("is-hidden", stage === "brief");
     });
+    // Candidate buildings take color once the sites are introduced; the focused one is vermilion.
+    const revealed = stage !== "brief";
+    const focus = candidates.find((site) => site.id === focusSiteId);
+    paintCandidates(map, revealed ? candidates.map((site) => site.name) : [], revealed ? focus?.name ?? null : null);
   }, [candidates, focusSiteId, ready, stage]);
 
   // Camera: the whole neighborhood for the brief, the three sites afterwards.

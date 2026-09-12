@@ -7,7 +7,7 @@
  * is drawn from the backend's `heatmap` points.
  */
 
-import type { Map as MapLibreMap } from "maplibre-gl";
+import type { ExpressionSpecification, Map as MapLibreMap } from "maplibre-gl";
 
 import type { Coordinate, HeatmapPoint } from "@/lib/contract";
 import { HERO_PALETTE } from "@/lib/hero-palette";
@@ -19,7 +19,12 @@ export const STUDIO_COLORS = {
   ink: "#1a1917",
   vermilion: "#e2462a",
   slice: "#fbfaf6",
+  candidate: "#f0b3a1",
+  venue: "#3a3934",
 } as const;
+
+/** The venue's building carries this OSM name in the slice. */
+export const VENUE_BUILDING_NAME = "The Beehive";
 
 const LAYER = {
   context: "studio-context-buildings",
@@ -74,6 +79,23 @@ export function restyleContext(map: MapLibreMap) {
 }
 
 /** The demo slice as a white architectural model. */
+export function sliceColor(candidateNames: string[], focusName: string | null): ExpressionSpecification {
+  // Most buildings have no facility name; they must never match an empty focus or list.
+  const facility: ExpressionSpecification = ["coalesce", ["get", "facility_name"], "\u0000"];
+  return [
+    "case",
+    ["==", ["coalesce", ["get", "name"], ""], VENUE_BUILDING_NAME], STUDIO_COLORS.venue,
+    ["==", facility, focusName ?? "\u0001"], STUDIO_COLORS.vermilion,
+    ["in", facility, ["literal", candidateNames]], STUDIO_COLORS.candidate,
+    STUDIO_COLORS.slice,
+  ];
+}
+
+/** Candidate buildings are matched by the facility name the backend reports for each site. */
+export function paintCandidates(map: MapLibreMap, candidateNames: string[], focusName: string | null) {
+  if (map.getLayer(LAYER.slice)) map.setPaintProperty(LAYER.slice, "fill-extrusion-color", sliceColor(candidateNames, focusName));
+}
+
 export function addStudioSlice(map: MapLibreMap) {
   if (!map.getSource(SLICE_SOURCE)) map.addSource(SLICE_SOURCE, sliceSourceSpec());
   if (map.getLayer(LAYER.slice)) return;
@@ -82,7 +104,7 @@ export function addStudioSlice(map: MapLibreMap) {
     type: "fill-extrusion",
     source: SLICE_SOURCE,
     paint: {
-      "fill-extrusion-color": STUDIO_COLORS.slice,
+      "fill-extrusion-color": sliceColor([], null),
       "fill-extrusion-height": ["*", ["get", "height"], SLICE_HEIGHT_EXAGGERATION],
       "fill-extrusion-opacity": 1,
       "fill-extrusion-vertical-gradient": true,
