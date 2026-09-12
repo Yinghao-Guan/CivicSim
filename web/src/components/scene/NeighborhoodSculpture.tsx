@@ -4,7 +4,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
-import { glslColor } from "@/components/scene/glsl-color";
+import { glslColor, thermalGlsl } from "@/components/scene/glsl-color";
 import { heroSiteCycle } from "@/lib/animation/hero-site-cycle";
 import { seededRandom } from "@/lib/animation/seeded-random";
 import { HERO_PALETTE } from "@/lib/hero-palette";
@@ -223,7 +223,8 @@ const coverageFragment = /* glsl */ `
   }
 `;
 
-// Surface heat as a thermal ramp; inside the reach ring the ground cools toward blue.
+// Surface heat on the shared thermal ramp, washed toward paper so the neighborhood stays quieter
+// than the background grid; inside the reach ring the ground cools toward blue.
 const heatFragment = /* glsl */ `
   uniform vec2 uSite;
   uniform float uReach;
@@ -257,12 +258,7 @@ const heatFragment = /* glsl */ `
     return value;
   }
 
-  vec3 thermal(float t) {
-    vec3 color = mix(${glslColor(HERO_PALETTE.heat.cool)}, ${glslColor(HERO_PALETTE.heat.mild)}, smoothstep(0.0, 0.3, t));
-    color = mix(color, ${glslColor(HERO_PALETTE.heat.warm)}, smoothstep(0.3, 0.55, t));
-    color = mix(color, ${glslColor(HERO_PALETTE.heat.hot)}, smoothstep(0.55, 0.8, t));
-    return mix(color, ${glslColor(HERO_PALETTE.heat.peak)}, smoothstep(0.8, 1.0, t));
-  }
+  ${thermalGlsl}
 
   void main() {
     vec2 offset = (vUv * 2.0 - 1.0) * ${STREETS_X[3].toFixed(2)};
@@ -270,12 +266,14 @@ const heatFragment = /* glsl */ `
     float drift = fbm(board * 0.8 + vec2(uTime * 0.04, -uTime * 0.03));
     float heat = 0.62 * blob(board, vec2(-1.7, 1.5), 1.6) + 0.55 * blob(board, vec2(1.9, -1.3), 1.3)
       + 0.45 * blob(board, vec2(1.3, 2.1), 1.0) + 0.3 * blob(board, vec2(-1.6, -1.9), 1.2);
-    heat = clamp(heat * 1.15 + drift * 0.7 - 0.02, 0.0, 1.0);
+    // Open ground sits in the green-to-yellow range; the blobs push blocks into orange and red.
+    heat = clamp(0.3 + heat * 0.8 + drift * 0.45 - 0.1, 0.0, 1.0);
     float cooled = (1.0 - smoothstep(uReach * 0.35, uReach, distance(board, uSite))) * step(0.05, uReach);
-    heat *= 1.0 - cooled * 0.95;
     float edge = 1.0 - smoothstep(${(STREETS_X[3] - 0.25).toFixed(2)}, ${STREETS_X[3].toFixed(2)}, max(abs(board.x), abs(board.y)));
-    float alpha = mix(0.26 + heat * 0.5, 0.44, cooled);
-    gl_FragColor = vec4(thermal(heat), alpha * edge * uOpacity);
+    heat *= 1.0 - cooled * 0.95;
+    vec3 color = mix(thermal(heat), ${glslColor(HERO_PALETTE.board.slab)}, 0.4);
+    float alpha = mix(0.12 + heat * 0.26, 0.26, cooled);
+    gl_FragColor = vec4(color, alpha * edge * uOpacity);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }

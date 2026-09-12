@@ -4,7 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
-import { glslColor } from "@/components/scene/glsl-color";
+import { glslColor, thermalGlsl } from "@/components/scene/glsl-color";
 import { seededRandom } from "@/lib/animation/seeded-random";
 import { HERO_PALETTE } from "@/lib/hero-palette";
 
@@ -34,6 +34,35 @@ const surface = /* glsl */ `
   }
 `;
 
+// Drifting hotspots tint the linework like a thermal survey: each one reads as
+// concentric isotherm bands, and ground away from them falls back to blue and green.
+const HOTSPOTS: [number, number, number, number][] = [
+  // x, z, radius, strength
+  // Warm cores sit below and beside the copy so the text column reads over cooler lines.
+  [3, 8, 6.5, 1.0],
+  [12, -5, 8, 0.95],
+  [22, 8, 6, 0.85],
+  [-13, 9, 5, 0.7],
+  [-8, -16, 8, 0.8],
+];
+
+const heatField = /* glsl */ `
+  ${thermalGlsl}
+
+  float groundHeat(vec2 ground) {
+    float heat = 0.04;
+    ${HOTSPOTS.map(([x, z, radius, strength], index) => `{
+      vec2 center = vec2(${x.toFixed(1)}, ${z.toFixed(1)}) + 1.3 * vec2(sin(uTime * 0.06 + ${(index * 1.7).toFixed(1)}), cos(uTime * 0.05 + ${(index * 2.3).toFixed(1)}));
+      vec2 delta = (ground - center) / ${radius.toFixed(1)};
+      heat += ${strength.toFixed(2)} * exp(-dot(delta, delta));
+    }`).join("\n    ")}
+    heat = clamp(heat, 0.0, 1.0);
+    // Soft quantization turns the falloff into visible isotherm rings.
+    float bands = 7.0;
+    return mix(heat, (floor(heat * bands) + 0.5) / bands, 0.85);
+  }
+`;
+
 const lineVertex = /* glsl */ `
   ${surface}
   attribute float aWeight;
@@ -49,12 +78,14 @@ const lineVertex = /* glsl */ `
 
 const lineFragment = /* glsl */ `
   ${surface}
+  ${heatField}
   varying float vWeight;
 
   void main() {
     float passing = pow(max(0.0, sin(vGround.x * 0.3 + vGround.y * 0.22 - uTime * 0.3)), 7.0);
-    float alpha = (0.12 + vWeight * 0.12 + passing * 0.055) * edgeFade(vGround) * uOpacity * ${HERO_PALETTE.grid.alpha.toFixed(2)};
-    gl_FragColor = vec4(${glslColor(HERO_PALETTE.grid.line)}, alpha);
+    float heat = groundHeat(vGround);
+    float alpha = (0.36 + vWeight * 0.2 + heat * 0.2 + passing * 0.06) * edgeFade(vGround) * uOpacity * ${HERO_PALETTE.grid.alpha.toFixed(2)};
+    gl_FragColor = vec4(thermal(heat), alpha);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
@@ -76,13 +107,15 @@ const nodeVertex = /* glsl */ `
 
 const nodeFragment = /* glsl */ `
   ${surface}
+  ${heatField}
   varying float vWeight;
 
   void main() {
     float disc = 1.0 - smoothstep(0.22, 0.5, length(gl_PointCoord - 0.5));
-    float alpha = disc * (0.32 + vWeight * 0.26) * edgeFade(vGround) * uOpacity * ${HERO_PALETTE.grid.alpha.toFixed(2)};
+    float heat = groundHeat(vGround);
+    float alpha = disc * (0.55 + vWeight * 0.3 + heat * 0.2) * edgeFade(vGround) * uOpacity * ${HERO_PALETTE.grid.alpha.toFixed(2)};
     if (alpha < 0.004) discard;
-    gl_FragColor = vec4(${glslColor(HERO_PALETTE.grid.node)}, alpha);
+    gl_FragColor = vec4(thermal(heat), alpha);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }

@@ -20,9 +20,11 @@ export default function HeroSceneFallback() {
       <defs>
         <radialGradient id="hero-fallback-fade"><stop stopColor="white" offset=".2" /><stop stopColor="black" offset="1" /></radialGradient>
         <mask id="hero-fallback-mask"><rect width="1280" height="720" fill="url(#hero-fallback-fade)" /></mask>
-        <radialGradient id="hero-fallback-heat"><stop stopColor={HERO_PALETTE.heat.peak} stopOpacity=".3" offset="0" /><stop stopColor={HERO_PALETTE.heat.hot} stopOpacity=".26" offset=".35" /><stop stopColor={HERO_PALETTE.heat.warm} stopOpacity=".18" offset=".7" /><stop stopColor={HERO_PALETTE.heat.mild} stopOpacity="0" offset="1" /></radialGradient>
+        <radialGradient id="hero-fallback-heat">
+          {[...HERO_PALETTE.heat].reverse().map(({ at, color }) => <stop key={at} stopColor={color} stopOpacity={at === 0 ? 0 : .1 + at * .24} offset={1 - at} />)}
+        </radialGradient>
       </defs>
-      <g fill="none" stroke={HERO_PALETTE.grid.line} strokeWidth=".6" opacity=".22" mask="url(#hero-fallback-mask)">
+      <g fill="none" stroke={HERO_PALETTE.heat[1].color} strokeWidth=".6" opacity=".3" mask="url(#hero-fallback-mask)">
         {Array.from({ length: 25 }, (_, i) => <path key={`r${i}`} d={`M-50 ${240 + i * 23} Q500 ${175 + i * 17} 1330 ${275 + i * 27}`} />)}
         {Array.from({ length: 29 }, (_, i) => <path key={`c${i}`} d={`M${400 + i * 20} 230 Q${i * 56 - 50} 470 ${i * 86 - 500} 740`} />)}
       </g>
