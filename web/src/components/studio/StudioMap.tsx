@@ -25,6 +25,8 @@ type StudioMapProps = {
   lens: StudioLens;
   reducedMotion: boolean;
   nearby: NearestCooling | null;
+  /** A cooling center picked from the list, flown to while the candidates are introduced. */
+  flyToPoint: Coordinate | null;
   onSelectSite: (siteId: string) => void;
   onPickLocation: (location: Coordinate) => void;
 };
@@ -115,7 +117,7 @@ function markerElement(letter: string, name: string) {
   return element;
 }
 
-export default function StudioMap({ stage, candidates, heatmap, scenario, focusSiteId, lens, reducedMotion, nearby, onSelectSite, onPickLocation }: StudioMapProps) {
+export default function StudioMap({ stage, candidates, heatmap, scenario, focusSiteId, lens, reducedMotion, nearby, flyToPoint, onSelectSite, onPickLocation }: StudioMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const overlayRef = useRef<MapboxOverlay | null>(null);
@@ -247,6 +249,12 @@ export default function StudioMap({ stage, candidates, heatmap, scenario, focusS
     draw();
     return () => cancelAnimationFrame(frame);
   }, [lens, nearby, ready, reducedMotion, scenario, stage]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || !flyToPoint) return;
+    map.flyTo({ center: flyToPoint, zoom: 16.2, bearing: map.getBearing(), pitch: map.getPitch(), padding: PANEL_PADDING, duration: reducedMotion ? 0 : 1600 });
+  }, [flyToPoint, ready, reducedMotion]);
 
   // Bring a clicked building and its walks into view without turning or tilting the camera.
   useEffect(() => {

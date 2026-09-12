@@ -439,7 +439,8 @@ a { text-decoration: none; }
 .studio-legend figcaption { color: var(--studio-quiet); font-size: 11px; }
 .studio-legend i { display: block; height: 8px; margin-top: 9px; border-radius: 99px; }
 .studio-legend div { display: flex; justify-content: space-between; margin-top: 7px; color: var(--studio-quiet); font-size: 10px; }
-.studio-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 24px; }
+/* The step's actions stay reachable when a long list scrolls the panel. */
+.studio-actions { position: sticky; bottom: -26px; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: auto -30px -26px; padding: 16px 30px 22px; background: linear-gradient(to bottom, rgba(247, 245, 239, 0), rgba(247, 245, 239, .96) 30%); }
 .studio-step > .studio-cta { margin-top: auto; align-self: flex-start; }
 .studio-cta {
   height: 46px;
@@ -532,6 +533,31 @@ a { text-decoration: none; }
 .studio-nearby__name small { color: var(--studio-quiet); font-size: 10.5px; }
 .studio-nearby b { flex: none; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .studio-nearby b small { color: var(--studio-quiet); font-size: 10px; font-weight: 500; }
+
+.studio-today { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--studio-rule); }
+.studio-today h2 { color: #2f68b8; font-size: 13px; font-weight: 600; letter-spacing: -.01em; }
+.studio-today > p { margin-top: 3px; color: var(--studio-quiet); font-size: 11px; }
+.studio-today ul { margin-top: 8px; list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.studio-today button { width: 100%; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 7px 6px; border-radius: 8px; text-align: left; background: none; cursor: pointer; }
+.studio-today button:hover { background: rgba(47, 104, 184, .08); }
+.studio-today i { flex: none; width: 9px; height: 9px; border-radius: 2px; background: #7fa6d8; }
+.studio-today span { flex: 1; min-width: 0; }
+.studio-today strong { display: block; overflow: hidden; font-size: 12px; font-weight: 560; white-space: nowrap; text-overflow: ellipsis; }
+.studio-today small { color: var(--studio-quiet); font-size: 10.5px; }
+.studio-today b { flex: none; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.studio-intervention { margin-top: 16px; padding: 14px; border: 1px solid rgba(63, 130, 90, .25); border-radius: 12px; background: rgba(92, 179, 107, .08); }
+.studio-intervention.is-on { background: rgba(92, 179, 107, .16); }
+.studio-intervention__head { display: flex; gap: 10px; }
+.studio-intervention__head svg { flex: none; margin-top: 2px; color: #3f825a; }
+.studio-intervention__head strong { display: block; font-size: 13px; }
+.studio-intervention__head small { display: block; margin-top: 2px; color: var(--studio-body); font-size: 11.5px; line-height: 1.45; }
+.studio-intervention__delta { margin-top: 10px; font-size: 13px; }
+.studio-intervention__delta s { color: var(--studio-quiet); }
+.studio-intervention__delta b { color: #2f7a4d; }
+.studio-intervention__delta span { display: block; margin-top: 3px; color: var(--studio-quiet); font-size: 11px; }
+.studio-intervention button { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 7px 12px; border-radius: 99px; color: #fff; background: #3f825a; font-size: 12px; font-weight: 600; cursor: pointer; }
+.studio-intervention.is-on button { color: #2f5e41; background: rgba(63, 130, 90, .14); }
+.studio-intervention button:disabled { opacity: .7; cursor: progress; }
 
 .studio-marker { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; cursor: pointer; transition: opacity .4s; }
 /* MapLibre drives marker opacity inline, so hide with visibility. */

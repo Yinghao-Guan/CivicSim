@@ -1,6 +1,6 @@
 "use client";
 
-import { Accessibility, ArrowLeft, ArrowRight, Check, Flame, Loader2, MapPin, RotateCcw, TriangleAlert, Users, X } from "lucide-react";
+import { Accessibility, ArrowLeft, ArrowRight, Check, Flame, Loader2, MapPin, RotateCcw, Trees, TriangleAlert, Users, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -9,6 +9,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { StudioLens, StudioStage } from "@/components/studio/StudioMap";
 import type { CandidateSite, Coordinate, SimulationResponse } from "@/lib/contract";
 import { FACILITY_LABELS, fetchNearestCooling, type NearestCooling } from "@/lib/cooling";
+import { SHADE_SITE_ID, SITE_B_APPROACH_SEGMENTS } from "@/lib/interventions";
+import { VENUE } from "@/lib/demoArea.generated";
 import { THERMAL_GRADIENT } from "@/lib/studio-map";
 import { BASELINE_ID, useScenarios } from "@/lib/useScenarios";
 
@@ -58,7 +60,7 @@ const panelMotion = {
 
 export default function StudioScreen() {
   const scenarios = useScenarios();
-  const { load, loadError, candidates, results, running, runError, select, runAllCandidates, retry } = scenarios;
+  const { load, loadError, candidates, results, running, runError, select, runAllCandidates, runIntervention, retry } = scenarios;
   const reducedMotion = Boolean(useReducedMotion());
   const [stage, setStage] = useState<StudioStage>("brief");
   const [focusSiteId, setFocusSiteId] = useState<string | null>(null);
@@ -78,9 +80,31 @@ export default function StudioScreen() {
 
   const clearNearby = () => { setNearby(null); setNearbyState("idle"); setNearbyError(null); };
 
+  // Today's cooling centers, listed with the walk from the venue we present from.
+  const [coolingToday, setCoolingToday] = useState<NearestCooling | null>(null);
+  const [flyToPoint, setFlyToPoint] = useState<Coordinate | null>(null);
+  useEffect(() => {
+    if (load !== "ready") return;
+    let alive = true;
+    fetchNearestCooling(VENUE.lngLat, 10).then((result) => { if (alive) setCoolingToday(result); }).catch(() => {});
+    return () => { alive = false; };
+  }, [load]);
+
+  // The shade proposal re-runs Site B with its approach streets shaded; the unshaded run stays for comparison.
+  const [shadeOn, setShadeOn] = useState(false);
+  const shadedRun = Object.values(results).find((run) => run.selected_site === SHADE_SITE_ID && run.interventions.shade_segments.length > 0) ?? null;
+  const toggleShade = () => {
+    if (shadeOn) { setShadeOn(false); return; }
+    setShadeOn(true);
+    if (!shadedRun) runIntervention(SHADE_SITE_ID, SITE_B_APPROACH_SEGMENTS);
+  };
+
   const baseline = results[BASELINE_ID] ?? null;
   const allRun = candidates.length > 0 && candidates.every((site) => results[site.id]);
-  const scenario = focusSiteId ? results[focusSiteId] ?? null : null;
+  const unshaded = focusSiteId ? results[focusSiteId] ?? null : null;
+
+  const showingShade = shadeOn && focusSiteId === SHADE_SITE_ID && Boolean(shadedRun);
+  const scenario = showingShade ? shadedRun : unshaded;
 
   const lensSpec = LENSES.find((spec) => spec.id === lens) ?? LENSES[0];
   const overallLeader = allRun ? leaderFor(LENSES[0], candidates, results) : null;
@@ -133,12 +157,13 @@ export default function StudioScreen() {
       <StudioMap
         stage={stage}
         candidates={candidates}
-        heatmap={baseline?.heatmap ?? []}
+        heatmap={(showingShade ? shadedRun?.heatmap : baseline?.heatmap) ?? []}
         scenario={scenario}
         focusSiteId={focusSiteId}
         lens={lens}
         reducedMotion={reducedMotion}
         nearby={nearby}
+        flyToPoint={flyToPoint}
         onSelectSite={focusSite}
         onPickLocation={pickLocation}
       />
@@ -217,18 +242,18 @@ export default function StudioScreen() {
                   <div><span>Cooler</span><span>{Math.round(heatRange[0] * 100)}–{Math.round(heatRange[1] * 100)}% exposed</span><span>Hotter</span></div>
                 </figure>
               )}
-              <button className="studio-cta" onClick={() => setStage("sites")}>Meet the three sites <ArrowRight size={17} /></button>
+              <button className="studio-cta" onClick={() => setStage("sites")}>Where could the next one go? <ArrowRight size={17} /></button>
             </motion.div>
           )}
 
           {load === "ready" && stage === "sites" && (
             <motion.div key="sites" className="studio-step" {...panelMotion}>
               <p className="studio-kicker">Candidates</p>
-              <h1>Three places that could open their doors.</h1>
+              <h1>Three sites the model compares.</h1>
               <ol className="studio-sites">
                 {candidates.map((site, index) => (
                   <li key={site.id}>
-                    <button className={site.id === focusSiteId ? "is-active" : ""} onClick={() => setFocusSiteId(site.id)}>
+                    <button className={site.id === focusSiteId ? "is-active" : ""} onClick={() => { setFlyToPoint(null); setFocusSiteId(site.id); }}>
                       <span className="studio-letter">{letter(index)}</span>
                       <span className="studio-site">
                         <strong>{site.name}</strong>
@@ -243,6 +268,27 @@ export default function StudioScreen() {
                 ))}
               </ol>
               <p className="studio-note">Setup costs are illustrative estimates, not city figures.</p>
+
+              {coolingToday && (
+                <section className="studio-today">
+                  <h2>Today&apos;s {coolingToday.places.length} cooling centers</h2>
+                  <p>Walk from The Beehive. Select one to find it on the map.</p>
+                  <ul>
+                    {coolingToday.places.map((place) => {
+                      const alsoCandidate = candidates.some((site) => site.name === place.name);
+                      return (
+                        <li key={place.id}>
+                          <button onClick={() => { setFocusSiteId(null); setFlyToPoint(place.location); }}>
+                            <i />
+                            <span><strong>{place.name}</strong><small>{FACILITY_LABELS[place.facility_type] ?? place.facility_type}{alsoCandidate ? " · also a candidate" : ""}</small></span>
+                            <b>{Math.round(place.walk_minutes)}<small> min</small></b>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              )}
               <div className="studio-actions">
                 <button className="studio-back" onClick={() => setStage("brief")}><ArrowLeft size={15} /> Back</button>
                 <button className="studio-cta" onClick={runSimulation}>Run the simulation <ArrowRight size={17} /></button>
@@ -339,6 +385,27 @@ export default function StudioScreen() {
                 <div><dt>Blocked by barriers</dt><dd>{scenario.unreachable_agents.filter((agent) => agent.reason === "accessibility_barrier").length} of {scenario.run.agent_count} agents</dd></div>
                 <div><dt>Beyond 15 minutes</dt><dd>{scenario.unreachable_agents.filter((agent) => agent.reason === "time_limit").length} of {scenario.run.agent_count} agents</dd></div>
               </dl>
+
+              {focusSiteId === SHADE_SITE_ID && (
+                <section className={`studio-intervention${showingShade ? " is-on" : ""}`}>
+                  <div className="studio-intervention__head">
+                    <Trees size={16} />
+                    <div>
+                      <strong>Resident proposal: shade the walk</strong>
+                      <small>Street trees over the four streets residents take to the pool.</small>
+                    </div>
+                  </div>
+                  {showingShade && unshaded && shadedRun && (
+                    <p className="studio-intervention__delta">
+                      Heat exposure en route <s>{unshaded.metrics.average_heat_exposure.toFixed(1)}</s> → <b>{shadedRun.metrics.average_heat_exposure.toFixed(1)} min</b>
+                      <span>Who can reach the pool does not change; the walk is cooler.</span>
+                    </p>
+                  )}
+                  <button onClick={toggleShade} disabled={shadeOn && !shadedRun}>
+                    {shadeOn && !shadedRun ? <><Loader2 size={13} className="spin" /> Re-running…</> : showingShade ? "Remove shade" : "Add shade and re-run"}
+                  </button>
+                </section>
+              )}
 
               <div className="studio-assumptions">
                 <button onClick={() => setShowAssumptions((open) => !open)}>{showAssumptions ? "Hide" : "Model"} assumptions</button>

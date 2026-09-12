@@ -7,7 +7,7 @@
  * is drawn from the backend's `heatmap` points.
  */
 
-import type { ExpressionSpecification, Map as MapLibreMap } from "maplibre-gl";
+import type { ExpressionSpecification, ImageSource, Map as MapLibreMap } from "maplibre-gl";
 
 import type { Coordinate, HeatmapPoint } from "@/lib/contract";
 import { HERO_PALETTE } from "@/lib/hero-palette";
@@ -195,11 +195,16 @@ function heatImage(points: HeatmapPoint[]) {
   return { url: canvas.toDataURL(), coordinates: corners };
 }
 
-/** Lay the heat field under the slice. Heat belongs to the neighborhood, so it is drawn once. */
+/** Lay the heat field under the slice, or repaint it when an intervention changes street heat. */
 export function addHeatField(map: MapLibreMap, points: HeatmapPoint[]) {
-  if (!points.length || map.getSource(LAYER.heat)) return;
+  if (!points.length) return;
   const image = heatImage(points);
   if (!image) return;
+  const existing = map.getSource(LAYER.heat) as ImageSource | undefined;
+  if (existing) {
+    existing.updateImage({ url: image.url, coordinates: image.coordinates });
+    return;
+  }
   map.addSource(LAYER.heat, { type: "image", url: image.url, coordinates: image.coordinates });
   map.addLayer(
     { id: LAYER.heat, type: "raster", source: LAYER.heat, paint: { "raster-opacity": 1, "raster-fade-duration": 0 } },
