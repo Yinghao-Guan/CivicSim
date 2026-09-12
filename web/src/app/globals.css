@@ -473,6 +473,39 @@ a { text-decoration: none; }
 .spin { animation: studioSpin 1s linear infinite; }
 @keyframes studioSpin { to { transform: rotate(360deg); } }
 
+.studio-results h1 { display: none; }
+.studio-lenses { display: grid; grid-template-columns: .8fr 1.1fr 1.1fr; gap: 4px; margin-top: 16px; padding: 4px; border-radius: 12px; background: rgba(26, 25, 23, .06); }
+.studio-lenses button { height: 34px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border-radius: 9px; color: var(--studio-body); background: none; font-size: 11px; white-space: nowrap; font-weight: 560; cursor: pointer; transition: background .2s, color .2s; }
+.studio-lenses button.is-active { color: var(--studio-ink); background: #fff; box-shadow: 0 4px 12px -8px rgba(0, 0, 0, .35); }
+.studio-headline { margin-top: 22px; }
+.studio-headline small { color: var(--studio-quiet); font-size: 12px; }
+.studio-headline strong { display: block; margin-top: 6px; font-size: 52px; line-height: 1; letter-spacing: -.055em; font-weight: 540; }
+.studio-headline span { display: block; margin-top: 8px; color: var(--studio-body); font-size: 12.5px; }
+.studio-compare { margin-top: 20px; list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.studio-compare button { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid transparent; border-radius: 12px; text-align: left; background: rgba(255, 255, 255, .4); cursor: pointer; transition: background .2s, border-color .2s; }
+.studio-compare button:hover { background: rgba(255, 255, 255, .8); }
+.studio-compare button.is-active { border-color: var(--studio-rule); background: #fff; }
+.studio-compare__body { flex: 1; min-width: 0; }
+.studio-compare__label { min-width: 0; display: flex; align-items: center; gap: 8px; }
+.studio-compare__label strong { min-width: 0; overflow: hidden; font-size: 12.5px; font-weight: 560; white-space: nowrap; text-overflow: ellipsis; }
+.studio-compare__label em { flex: none; padding: 2px 6px; border-radius: 99px; color: #fff; background: var(--studio-signal); font-size: 9px; font-style: normal; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.studio-bar { display: block; height: 5px; margin-top: 7px; border-radius: 99px; background: rgba(26, 25, 23, .08); overflow: hidden; }
+.studio-bar i { display: block; height: 100%; border-radius: inherit; background: var(--studio-ink); }
+.is-active .studio-bar i { background: var(--studio-signal); }
+.studio-compare b { flex: none; min-width: 52px; text-align: right; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.studio-flip { display: flex; gap: 10px; margin-top: 16px; padding: 14px; border-radius: 12px; color: #7a2412; background: #fbe6de; }
+.studio-flip svg { flex: none; margin-top: 2px; color: var(--studio-signal); }
+.studio-flip strong { font-size: 13px; }
+.studio-flip p { margin-top: 4px; font-size: 12px; line-height: 1.5; }
+.studio-flip button { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; padding: 0; color: var(--studio-signal-text); background: none; font-size: 12px; font-weight: 600; cursor: pointer; }
+.studio-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--studio-rule); }
+.studio-facts dt { color: var(--studio-quiet); font-size: 10.5px; }
+.studio-facts dd { margin-top: 3px; font-size: 14px; font-weight: 560; font-variant-numeric: tabular-nums; }
+.studio-facts dd.is-warning { color: var(--studio-signal-text); }
+.studio-assumptions { margin-top: 14px; }
+.studio-assumptions button { padding: 0; color: var(--studio-body); background: none; font-size: 11.5px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.studio-assumptions ul { margin-top: 8px; padding-left: 16px; color: var(--studio-quiet); font-size: 11px; line-height: 1.5; }
+
 .studio-marker { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; cursor: pointer; transition: opacity .4s; }
 /* MapLibre drives marker opacity inline, so hide with visibility. */
 .studio-marker.is-hidden { visibility: hidden; }
