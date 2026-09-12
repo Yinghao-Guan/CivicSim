@@ -53,26 +53,26 @@ export default function ResultsScreen() {
   };
 
   const primaryMetric = state.lens === "mobility" ? `${result.wheelchair}%` : state.lens === "heat" ? formatNumber(result.vulnerable) : formatNumber(result.population);
-  const primaryLabel = state.lens === "mobility" ? "ACCESSIBLE REACH" : state.lens === "heat" ? "VULNERABLE RESIDENTS REACHED" : "RESIDENTS WITHIN 15 MIN";
+  const primaryLabel = state.lens === "mobility" ? "Accessible reach" : state.lens === "heat" ? "Vulnerable residents reached" : "Residents within 15 minutes";
 
   return (
     <main className={`results-screen app-stage ${mobility ? "mobility-reveal" : ""}`}>
       <header className="results-header">
         <Brand compact />
-        <div className="results-run-status"><span className={state.simulationStatus === "fallback" ? "fallback" : ""} />{state.simulationStatus === "fallback" ? "PRECOMPUTED DEMO RUN" : "SIMULATION COMPLETE"}</div>
-        <button className="reset-button" onClick={resetDemo}><RotateCcw size={14} /> RESET DEMO</button>
+        <div className="results-run-status"><span className={state.simulationStatus === "fallback" ? "fallback" : ""} />{state.simulationStatus === "fallback" ? "Precomputed demo run" : "Simulation complete"}</div>
+        <button className="reset-button" onClick={resetDemo}><RotateCcw size={14} /> Reset demo</button>
       </header>
 
       <section className="scenario-plaque">
-        <p className="kicker">SCENARIO / 01</p>
+        <p className="kicker">Scenario 01</p>
         <h1>Cooling center<br />placement</h1>
-        <div><span>SOUTH LOS ANGELES</span><span>${state.budget}K BUDGET</span><span>{OBJECTIVE_LABELS[state.objective].toUpperCase()}</span></div>
+        <div><span>South Los Angeles</span><span>${state.budget}K budget</span><span>{OBJECTIVE_LABELS[state.objective]}</span></div>
       </section>
 
       <section className="results-panel">
         <div className="winner-heading">
           <span className="winner-index">{state.recommendedSite.toUpperCase()}</span>
-          <div><small>STRONGEST FOR {LENS_LABELS[state.lens].toUpperCase()}</small><h2>{SITE_NAMES[state.recommendedSite]}</h2></div>
+          <div><small>Strongest for {LENS_LABELS[state.lens]}</small><h2>{SITE_NAMES[state.recommendedSite]}</h2></div>
         </div>
 
         <AnimatePresence mode="wait">
@@ -82,13 +82,13 @@ export default function ResultsScreen() {
         </AnimatePresence>
 
         <div className="supporting-metrics">
-          <div><small>HEAT EXPOSURE</small><strong>{result.exposure} min</strong></div>
-          <div><small>DEMAND / CAPACITY</small><strong className={result.capacity > 100 ? "warning" : ""}>{result.capacity}%</strong></div>
-          <div><small>SETUP COST</small><strong>{result.cost}</strong></div>
+          <div><small>Heat exposure</small><strong>{result.exposure} min</strong></div>
+          <div><small>Demand / capacity</small><strong className={result.capacity > 100 ? "warning" : ""}>{result.capacity}%</strong></div>
+          <div><small>Setup cost</small><strong>{result.cost}</strong></div>
         </div>
 
         <div className="site-selector">
-          {(["a", "b", "c"] as SiteId[]).map((site) => <button className={state.selectedSite === site ? "active" : ""} onClick={() => state.setSelectedSite(site)} key={site}><span>{site.toUpperCase()}</span><div><strong>SITE {site.toUpperCase()}</strong><small>{SITE_RESULTS[site][state.lens === "all" ? "population" : state.lens === "heat" ? "vulnerable" : "wheelchair"]}{state.lens === "mobility" ? "% accessible" : " reached"}</small></div>{state.recommendedSite === site && <em>BEST</em>}</button>)}
+          {(["a", "b", "c"] as SiteId[]).map((site) => <button className={state.selectedSite === site ? "active" : ""} onClick={() => state.setSelectedSite(site)} key={site}><span>{site.toUpperCase()}</span><div><strong>Site {site.toUpperCase()}</strong><small>{SITE_RESULTS[site][state.lens === "all" ? "population" : state.lens === "heat" ? "vulnerable" : "wheelchair"]}{state.lens === "mobility" ? "% accessible" : " reached"}</small></div>{state.recommendedSite === site && <em>Recommended</em>}</button>)}
         </div>
       </section>
 
@@ -96,25 +96,25 @@ export default function ResultsScreen() {
         {mobility && (
           <motion.aside className="equity-callout" initial={{ opacity: 0, x: 36 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }} transition={{ delay: 0.62, duration: 0.48 }}>
             <AlertTriangle size={17} />
-            <div><small>THE WINNER CHANGED</small><strong>Site C reaches more people overall, but inaccessible route segments weaken mobility access. Site B restores connected access to 82%.</strong></div>
+            <div><small>The recommendation changed</small><strong>Site C reaches more people overall, but inaccessible route segments weaken mobility access. Site B restores connected access to 82%.</strong></div>
             <ArrowRight size={16} />
           </motion.aside>
         )}
       </AnimatePresence>
 
       <nav className="lens-control" aria-label="Population lens">
-        <span>POPULATION LENS</span>
+        <span>Population lens</span>
         <div>
           {lenses.map((lens) => { const Icon = lens.icon; return <button className={state.lens === lens.id ? "active" : ""} onClick={() => changeLens(lens.id)} key={lens.id}><Icon size={15} />{lens.label}</button>; })}
         </div>
-        <button className="method-button" onClick={() => setShowMethod(true)}><Info size={14} /> MODEL ASSUMPTIONS</button>
+        <button className="method-button" onClick={() => setShowMethod(true)}><Info size={14} /> Model assumptions</button>
       </nav>
 
       <AnimatePresence>
         {showMethod && (
           <motion.aside className="method-overlay" initial={{ opacity: 0, x: 28 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }}>
             <button onClick={() => setShowMethod(false)} aria-label="Close model assumptions"><X size={16} /></button>
-            <p className="kicker">MODEL / TRANSPARENCY</p>
+            <p className="kicker">Model transparency</p>
             <h2>What this run assumes</h2>
             <dl>
               <div><dt>Population</dt><dd>2,500 seeded synthetic journeys</dd></div>

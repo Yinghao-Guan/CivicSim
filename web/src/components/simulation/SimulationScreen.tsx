@@ -44,9 +44,9 @@ export default function SimulationScreen() {
 
   return (
     <main className="simulation-screen app-stage">
-      <header className="stage-header"><Brand compact /><div className="stage-title"><span>LIVE MODEL RUN</span><strong>SOUTH LA · EXTREME HEAT</strong></div><button className="skip-button" onClick={skip}>SKIP <FastForward size={14} /></button></header>
+      <header className="stage-header"><Brand compact /><div className="stage-title"><span>Live model run</span><strong>South LA · Extreme heat</strong></div><button className="skip-button" onClick={skip}>Skip <FastForward size={14} /></button></header>
       <div className="simulation-readout">
-        <span className="run-number">RUN / 24791</span>
+        <span className="run-number">Run 24791</span>
         <AnimatePresence mode="wait">
           <motion.div key={state.simulationStep} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.28 }}>
             <small>0{state.simulationStep + 1} / 06</small>
@@ -58,7 +58,7 @@ export default function SimulationScreen() {
       <ol className="stage-sequence">
         {SIMULATION_STAGES.map((label, index) => <li className={index < state.simulationStep ? "complete" : index === state.simulationStep ? "active" : ""} key={label}><span>{index < state.simulationStep ? <Check size={12} /> : index + 1}</span>{label}</li>)}
       </ol>
-      <div className="simulation-stats"><div><small>AGENTS</small><strong>2,500</strong></div><div><small>REPETITIONS</small><strong>30</strong></div><div><small>ACTIVE SITES</small><strong>{state.candidates.length}</strong></div></div>
+      <div className="simulation-stats"><div><small>Residents</small><strong>2,500</strong></div><div><small>Repetitions</small><strong>30</strong></div><div><small>Active sites</small><strong>{state.candidates.length}</strong></div></div>
     </main>
   );
 }
