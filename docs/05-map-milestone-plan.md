@@ -584,6 +584,7 @@ Reviewed against `origin/backend` at `c460c32`.
 | 4,887 building footprints with ids and attributes | `web/public/data/buildings.geojson` | Committed. `building_id` is stable and is what MapLibre's `feature-state` keys on. |
 | Real candidate facilities in the area | §4.3 | Bethune pool, Slauson Senior Multipurpose Center, five school campuses. 46 buildings carry `candidate_eligible`. |
 | A deck.gl overlay, interleaved and proven | `web/lib/simulation.ts` | Occlusion against buildings is verified (§7.2). Real layers replace `occlusionProbeLayers()`. |
+| A typed client for all three endpoints | `web/lib/api.ts`, `web/lib/contract.ts` | `fetchBaseline()`, `simulate()`, `fetchScenario()`; shapes mirror the contract (§11.4). |
 | Offline basemap | `web/public/offline/` | 42 tiles, zooms 11–14, bbox plus one tile of margin. |
 
 The contract's response shapes drop straight into the overlay: `routes[].path` is already `[lon, lat]` for a deck.gl `PathLayer`, and `heatmap[]` is `position` plus `weight` for a `HeatmapLayer`. No transformation is needed.
@@ -607,12 +608,20 @@ The graph topology, travel times, accessibility flags and cohort weights should 
 
 ### 11.3 Two files that will collide on merge
 
-- **`web/lib/types.ts`.** The `map` branch defines `BuildingProperties` for the slice; `project_sync_tasks` defines the API contract types in the same file. They are different concerns and both are wanted. Keeping the contract mirror in its own module is safer, because the contract's §16 exists specifically to stop that mirror drifting.
+- **`web/lib/types.ts`.** The `map` branch defines `BuildingProperties` for the slice; `project_sync_tasks` defines the API contract types in the same file. **Resolved on this branch:** the contract types were ported into `web/lib/contract.ts`, a dedicated mirror of `docs/03-api-contract.md`, and `types.ts` keeps only map-side types. Separating them keeps the line between "agreed with the backend" and "ours to change" visible, which is what the contract's §16 is for. Take this branch's version; `project_sync_tasks`'s `types.ts` is now redundant.
 - **`backend/`.** `project_sync_tasks` carries a placeholder backend that the real one on `backend` supersedes. Per the backend workstream: take the frontend types and the mock fixtures from it, not the backend.
 
-### 11.4 Contract note already agreed
+### 11.4 Two frontend fixes, applied and verified
 
-`RunMetadata.seed` should be `number | null`. The backend's Pydantic schema already says `int | None` and returns `null`, because the demo cohort is enumerated rather than sampled and consumes no random seed; the contract's §11 example still shows a plain number, and `project_sync_tasks`'s TypeScript still says `seed: number`. Both need the null.
+Both were requested by the backend workstream before combining, and both turned out to be real rather than cosmetic. Verified against a local `origin/backend` `c460c32` server on `:8000`, called from the page at `:3000`.
+
+**`RunMetadata.seed` is `number | null`.** `web/lib/contract.ts` carries the null. The live backend returns `"seed": null` — the demo cohort is enumerated rather than sampled, so the run consumes no random seed — which means `seed: number` would have been a straightforward lie about the payload.
+
+**`backendReachable()` probes `/baseline`, not `/health`.** The contract defines no `/health`, and the running backend answers it with **404** — so the old probe would have reported the backend as unreachable while it was serving correctly. `web/lib/api.ts` now goes through `fetchBaseline()`.
+
+Still outstanding on the backend side, since those files are not on this branch: the contract's §11 example still shows `"seed": 24791`, and `project_sync_tasks`'s `web/lib/types.ts` still declares `seed: number`.
+
+While verifying, the rest of the client seam was confirmed working end to end: CORS from `localhost:3000` is accepted, `GET /baseline` and `POST /simulate` both return 200 with contract-shaped bodies, and route paths arrive as `[longitude, latitude]` pairs ready for deck.gl. `web/lib/api.ts` now exposes `fetchBaseline()`, `simulate()` and `fetchScenario()` over those three endpoints, and surfaces the contract's §13 `detail.message` in thrown errors instead of only a status code.
 
 ### 11.5 What was verified about the backend
 

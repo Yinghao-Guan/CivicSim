@@ -1,9 +1,13 @@
 /**
- * Shared types for the CivicSim frontend.
+ * Map-side types: things this workstream owns and may change freely.
  *
  * `BuildingProperties` mirrors what scripts/build_buildings.py writes into
  * web/public/data/buildings.geojson. The two must stay in step; the script is
  * the source of truth.
+ *
+ * The frontend/backend wire types are **not** here — they live in
+ * `contract.ts`, which mirrors `docs/03-api-contract.md` and may only change
+ * by agreement with the backend workstream.
  */
 
 /** How a building's height was determined — see doc 04 section 2.3.1. */
