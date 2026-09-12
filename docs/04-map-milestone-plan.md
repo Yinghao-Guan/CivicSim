@@ -77,13 +77,13 @@ web/public/data/     generated artifacts the browser fetches (committed)
 
 ---
 
-### M4 — deck.gl overlay and occlusion proof (layer ③)
+### M4 — deck.gl overlay and occlusion proof (layer ③) ✅ done 2026-09-12
 
 - Attach `MapboxOverlay` with **`interleaved: true`** (doc 03 §2.2).
 - Add one placeholder `PathLayer` routed through several buildings and a few `ScatterplotLayer` points. Their **only** purpose is to confirm the path is occluded by extruded buildings rather than floating over them.
 - Once confirmed, keep the placeholders behind a debug flag rather than deleting them — they become the reference case when real simulation data arrives.
 
-**Done when:** in a pitched view, a route passing behind a building is hidden by it.
+**Done when:** in a pitched view, a route passing behind a building is hidden by it. *Results: §7.*
 
 ---
 
@@ -99,7 +99,7 @@ May follow M4, but must not be forgotten.
 
 ## 2. Designing for the district-scale expansion
 
-Per doc 03 §4.2, the pressure point at CD 8/9/10 scale is data loading, not the GPU. Keep layer ②'s source behind a thin abstraction in `lib/map.ts` so swapping `geojson` for PMTiles is a local change. The tippecanoe → PMTiles pipeline is the only step that needs POSIX tooling; see §7.
+Per doc 03 §4.2, the pressure point at CD 8/9/10 scale is data loading, not the GPU. Keep layer ②'s source behind a thin abstraction in `lib/map.ts` so swapping `geojson` for PMTiles is a local change. The tippecanoe → PMTiles pipeline is the only step that needs POSIX tooling; see §8.
 
 ---
 
@@ -147,7 +147,7 @@ This box is **50% larger than the 1.5–2 km² doc 03 §3.1 originally specified
 
 *(measured across the full 3.5 × 3.5 km survey area; 95.7% within the chosen box)*
 
-Values are fine-grained decimals — 4.0, 4.2, 3.8, 3.9 m and so on — characteristic of the LA County LARIAC LiDAR import rather than hand-entered estimates. **The §8 risk of a uniform 5 m slab field is retired: OSM is a sufficient building source and no switch to a separate LARIAC dataset is needed.** The fallback chain stays in the M1 script as a safety net, but its `building:levels` step will almost never fire.
+Values are fine-grained decimals — 4.0, 4.2, 3.8, 3.9 m and so on — characteristic of the LA County LARIAC LiDAR import rather than hand-entered estimates. **The §9 risk of a uniform 5 m slab field is retired: OSM is a sufficient building source and no switch to a separate LARIAC dataset is needed.** The fallback chain stays in the M1 script as a safety net, but its `building:levels` step will almost never fire.
 
 Height distribution:
 
@@ -403,7 +403,58 @@ What shipped is a zoom cut-off: layer ① stops at zoom 15.5. It costs little, b
 
 ---
 
-## 7. Cross-platform conventions
+## 7. M4 results
+
+**Completed 2026-09-12.** deck.gl is attached with `interleaved: true` and occlusion against extruded buildings is confirmed.
+
+### 7.1 Files
+
+| File | Role |
+| --- | --- |
+| `web/lib/simulation.ts` | The overlay, the occlusion probe, and the flag that hides it |
+
+Packages: `@deck.gl/core`, `@deck.gl/layers`, `@deck.gl/mapbox` at 9.4.0.
+
+The overlay is added as a MapLibre *control* — that is what gives `interleaved: true` access to the map's own GL context and depth buffer. It is attached after the slice layers so the probe composites against buildings that already exist.
+
+### 7.2 The occlusion test
+
+The probe is a ground-level `PathLayer` that deliberately **cuts across building footprints instead of following a street**. A line down the middle of a road is never occluded, so it would pass the test without testing anything.
+
+Same camera, one variable:
+
+| Slice buildings | Probe path |
+| --- | --- |
+| Visible | Broken into segments, appearing only in the gaps between buildings |
+| Hidden | One continuous line across the whole frame |
+
+That difference is the proof: deck.gl is depth-testing against MapLibre's extrusions rather than drawing over them.
+
+**The §9 risk is retired — deck.gl 9.4.0 and MapLibre 5.24.0 interleave correctly.** The fallback of `interleaved: false` is not needed.
+
+### 7.3 The probe stays
+
+Per §1's M4 note it is kept rather than deleted: when real routes arrive, this is the known-good reference to compare against. `NEXT_PUBLIC_OCCLUSION_PROBE=off` hides it.
+
+### 7.4 A critical advisory we are carrying deliberately
+
+`npm audit` reports **maplibre-gl ≤ 6.4.0 — critical**, an XSS sanitizer bypass in `DOM.sanitize()` ([GHSA-jrc7-96c5-q579](https://github.com/advisories/GHSA-jrc7-96c5-q579)). The fix is maplibre-gl 6.9, a semver-major jump from the 5.24 this milestone was built and verified on.
+
+Decision: **stay on 5.24 for the hackathon**, on the evidence that there is no path to the vulnerable code in this application:
+
+| Exposure | Finding |
+| --- | --- |
+| `Popup` / `setHTML` / `setDOMContent` | Not used anywhere |
+| HTML handed to MapLibre | Two attribution strings, both source literals |
+| Deployment | None — the demo runs on localhost |
+
+`DOM.sanitize()` is reached when MapLibre renders popup or attribution HTML, and everything we give it is static content we wrote. Upgrading a major version on hackathon day risks the M2–M4 work that was just verified; `@deck.gl/mapbox` declares no peer dependency on maplibre-gl, so the 9.4 + MapLibre 6 pairing has nothing vouching for it either.
+
+**This must be revisited after the hackathon.** If the project is ever deployed, or starts rendering OSM-derived text through MapLibre popups rather than React, the upgrade becomes necessary rather than optional. The separate `postcss` advisory (§5.3) is unchanged: build-time only, over CSS we author.
+
+---
+
+## 8. Cross-platform conventions
 
 The team mixes macOS and Windows, so the build must work on both without per-machine instructions.
 
@@ -415,11 +466,12 @@ The team mixes macOS and Windows, so the build must work on both without per-mac
 
 ---
 
-## 8. Risks
+## 9. Risks
 
 | Risk | Response |
 | --- | --- |
 | ~~Height coverage in the slice is too low, so every building renders as a ~5 m slab~~ | **Retired by M0:** coverage is 96.2% with LiDAR-derived values. OSM is sufficient; no LARIAC switch needed. |
 | ~~Relief is too shallow to read as 2.5D — median building is 4.4 m and 99% are under 9.4 m~~ | **Settled in M3:** 2× vertical exaggeration, chosen against 1× and 3× on screen. The panel still reports true heights (§6.3). |
 | ~~The bbox reaches into the industrial corridor, making later synthetic-population placement unrealistic~~ | **Retired by M0:** the corridor is 2.16 km east, outside the box. Industrial/warehouse buildings inside are 6.7% (§3.5). |
-| `interleaved: true` misbehaves with a particular MapLibre/deck.gl version pair | M4 is a separate stage precisely to surface this early. Fallback is `interleaved: false` — occlusion is lost and the visuals degrade, but nothing is blocked. |
+| ~~`interleaved: true` misbehaves with a particular MapLibre/deck.gl version pair~~ | **Retired by M4:** deck.gl 9.4.0 and MapLibre 5.24.0 interleave correctly; occlusion verified (§7.2). |
+| Carrying a critical maplibre-gl advisory (XSS in `DOM.sanitize()`) rather than upgrading to 6.9 | Deliberate, with no reachable path to the vulnerable code in this app (§7.4). **Revisit after the hackathon**, and immediately if the project is deployed or starts rendering third-party text through MapLibre popups. |

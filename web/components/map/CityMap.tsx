@@ -25,6 +25,7 @@ import {
 } from "@/lib/map";
 import { BUILDING_COUNT, DEMO_AREA_BOUNDS } from "@/lib/demoArea.generated";
 import { buildContextStyle } from "@/lib/mapStyle";
+import { attachSimulationOverlay } from "@/lib/simulation";
 
 import { useSliceInteraction } from "./useSliceInteraction";
 
@@ -83,10 +84,14 @@ export default function CityMap({ onReady }: CityMapProps) {
     }
 
     let detachSlice: (() => void) | undefined;
+    let detachOverlay: (() => void) | undefined;
 
     map.once("load", () => {
       addSliceLayers(map);
       addVenueMarker(map);
+      // After the slice, so the overlay's interleaved layers are composited
+      // against buildings that already exist.
+      detachOverlay = attachSimulationOverlay(map).detach;
       detachSlice = attachRef.current(map);
       // Re-frame now that the container has its final size; the constructor
       // fit runs before layout settles on a first paint.
@@ -103,6 +108,7 @@ export default function CityMap({ onReady }: CityMapProps) {
 
     return () => {
       detachSlice?.();
+      detachOverlay?.();
       map.off("sourcedata", onSourceData);
       // Clear the ref *before* removing. React StrictMode unmounts and
       // remounts within the same tick in development, and MapLibre 5 throws
