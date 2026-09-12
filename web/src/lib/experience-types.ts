@@ -1,7 +1,7 @@
 export type SiteId = "a" | "b" | "c";
 export type Lens = "all" | "heat" | "mobility";
 export type Objective = "access" | "vulnerability" | "balanced";
-export type VisualStage = "hero" | "entering" | "setup" | "simulate" | "results";
+export type VisualStage = "hero" | "entering" | "choose" | "setup" | "simulate" | "results";
 
 export type SiteResult = {
   population: number;

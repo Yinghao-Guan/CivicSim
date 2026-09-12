@@ -31,6 +31,8 @@ export default function FadeGroup({ children, visible = true, appear = false, ra
     const target = visible ? 1 : 0;
     fade.current = reducedMotion ? target : THREE.MathUtils.damp(fade.current, target, rate, Math.min(delta, 0.05));
     if (Math.abs(fade.current - target) < 0.002) fade.current = target;
+    // Fully faded meshes would still write depth and punch holes in what is behind them.
+    group.current.visible = fade.current > 0;
     const done = fade.current === 1;
     if (done && settled.current) return;
     settled.current = done;

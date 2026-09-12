@@ -15,6 +15,7 @@ import type { VisualStage } from "@/lib/experience-types";
 const cameraTargets: Record<VisualStage, { position: THREE.Vector3; lookAt: THREE.Vector3 }> = {
   hero: { position: new THREE.Vector3(0, 6.5, 16), lookAt: new THREE.Vector3(0, 0, 0) },
   entering: { position: new THREE.Vector3(0, 5.5, 13.5), lookAt: new THREE.Vector3(1, 0, 0) },
+  choose: { position: new THREE.Vector3(0, 7.5, 15), lookAt: new THREE.Vector3(0, -1, -2) },
   setup: { position: new THREE.Vector3(8.8, 9.8, 11.2), lookAt: new THREE.Vector3(0, 0.1, 0) },
   simulate: { position: new THREE.Vector3(1.5, 13.8, 8.4), lookAt: new THREE.Vector3(0, 0, 0.4) },
   results: { position: new THREE.Vector3(8.7, 10.2, 11.8), lookAt: new THREE.Vector3(0.3, 0.15, 0.6) },
@@ -67,13 +68,14 @@ function ToneMapping({ enabled }: { enabled: boolean }) {
   return null;
 }
 
-function HeroModel({ entering, reducedMotion }: { entering: boolean; reducedMotion: boolean }) {
+function HeroModel({ stage, reducedMotion }: { stage: VisualStage; reducedMotion: boolean }) {
   const { size } = useThree();
   return (
     <>
       <ToneMapping enabled={false} />
-      <FlowingCityGrid reducedMotion={reducedMotion} exiting={entering} />
-      <FadeGroup visible={!entering} reducedMotion={reducedMotion}>
+      {/* The heat grid carries on behind the chooser; only the sculpture belongs to the hero. */}
+      <FlowingCityGrid reducedMotion={reducedMotion} exiting={stage === "entering"} />
+      <FadeGroup visible={stage === "hero"} reducedMotion={reducedMotion}>
         <NeighborhoodSculpture compact={size.width < 769} reducedMotion={reducedMotion} />
       </FadeGroup>
     </>
@@ -83,7 +85,7 @@ function HeroModel({ entering, reducedMotion }: { entering: boolean; reducedMoti
 function Scene() {
   const { visualStage } = useExperience();
   const reducedMotion = Boolean(useReducedMotion());
-  const isHero = visualStage === "hero" || visualStage === "entering";
+  const isHero = visualStage === "hero" || visualStage === "entering" || visualStage === "choose";
   return (
     <>
       <fog attach="fog" args={["#061018", 11, 31]} />
@@ -93,7 +95,7 @@ function Scene() {
       <VisibilityController />
       <CameraRig stage={visualStage} reducedMotion={reducedMotion} />
       {/* Past the hero the studio's real map takes over, so the twin draws nothing else. */}
-      {isHero && <HeroModel entering={visualStage === "entering"} reducedMotion={reducedMotion} />}
+      {isHero && <HeroModel stage={visualStage} reducedMotion={reducedMotion} />}
     </>
   );
 }

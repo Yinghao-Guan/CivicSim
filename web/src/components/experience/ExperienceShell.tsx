@@ -16,6 +16,7 @@ const TwinCanvas = dynamic(() => import("@/components/scene/TwinCanvas"), {
 
 const stageByPath: Record<string, VisualStage> = {
   "/": "hero",
+  "/start": "choose",
 };
 
 export default function ExperienceShell({ children }: { children: React.ReactNode }) {
@@ -24,7 +25,7 @@ export default function ExperienceShell({ children }: { children: React.ReactNod
 
   useEffect(() => {
     const nextStage = stageByPath[pathname];
-    const isHeroExit = pathname === "/" && visualStage === "entering";
+    const isHeroExit = pathname === "/" && (visualStage === "entering" || visualStage === "choose");
     if (nextStage && visualStage !== nextStage && !isHeroExit) setVisualStage(nextStage);
   }, [pathname, setVisualStage, visualStage]);
 

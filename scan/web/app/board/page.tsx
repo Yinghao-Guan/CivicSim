@@ -83,7 +83,8 @@ export default function BoardPage() {
     <main className="board">
       <aside className="board-side">
         <header className="board-brand">
-          <span className="brand">CivicSim <em>Scan</em></span>
+          {/* A plain link: /start lives in the main app, outside this zone's basePath. */}
+          <a className="brand" href="/start" title="Back to CivicSim">CivicSim <em>Scan</em></a>
           <span className="tiny muted">Resident reports</span>
         </header>
 

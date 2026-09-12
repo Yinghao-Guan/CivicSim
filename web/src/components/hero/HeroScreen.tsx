@@ -20,15 +20,16 @@ export default function HeroScreen() {
 
   useEffect(() => {
     reset();
-    router.prefetch("/studio");
+    router.prefetch("/start");
     return () => { if (timer.current) window.clearTimeout(timer.current); };
   }, [reset, router]);
 
   const enter = () => {
     if (entering) return;
     setEntering(true);
-    setVisualStage("entering");
-    timer.current = window.setTimeout(() => router.push("/studio"), reducedMotion ? 200 : 850);
+    // The grid stays for the chooser; only the sculpture and copy leave.
+    setVisualStage("choose");
+    timer.current = window.setTimeout(() => router.push("/start"), reducedMotion ? 200 : 700);
   };
 
   return (

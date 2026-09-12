@@ -2,9 +2,10 @@
 
 Interactive frontend for the CivicSim neighborhood decision studio: Next.js (App Router, TypeScript), a React Three Fiber hero, and MapLibre GL JS with an interleaved deck.gl overlay for the real neighborhood. Next renders the product; the FastAPI backend in `../backend` owns every simulation number.
 
-- `/` — opening hero
-- `/studio` — the real South Park map: brief, candidates, run, and the results dashboard on live backend data
-- `/community/board` — resident reports (the scan app in `../scan/web`, proxied as a zone; its phone page is `/community`)
+- `/` — opening hero; its call to action opens `/start`
+- `/start` — choose a way in: the City Twin or the Community Board
+- `/studio` — the City Twin: the real South Park map, brief, candidates, run, and the results dashboard on live backend data
+- `/community/board` — the Community Board: resident street reports from `../scan/web`, served through this app (see below)
 - `/lab` — integration workbench: the live map and scenario panel on their own
 
 `/setup`, `/simulate` and `/results` redirect to `/studio`.
@@ -38,10 +39,22 @@ Copy `.env.example` to `.env.local` and edit it. `NEXT_PUBLIC_*` values are inli
 
 For demo day, follow the runbook in [`../docs/05-map-milestone-plan.md`](../docs/05-map-milestone-plan.md) §8.4 — the step that matters is turning Wi-Fi **off** and reloading.
 
+## Community Board (multi-zone)
+
+`../scan/web` is a separate Next app with `basePath: "/community"`. This app rewrites `/community/*` to it (`SCAN_WEB_URL`, default `http://localhost:3001`) and `/scan-api/*` to the scan API (`SCAN_API_URL`, default `http://localhost:8001`), so the board, the phone page and both APIs share one origin — and one HTTPS tunnel for phones. Open the board at `http://localhost:3000/community/board`, not on port 3001.
+
 ## Demo day
 
+Run four processes (each has a configuration in `../.claude/launch.json`):
+
+```bash
+cd backend && uv run uvicorn main:app --port 8000
+cd scan/api && uv run uvicorn scan_api.main:app --port 8001
+cd scan/web && npm run dev      # :3001, reached through :3000/community
+cd web && npm run dev           # :3000
+```
+
 1. `cd backend && uv run uvicorn main:app --port 8000` — the studio shows a retry panel until it answers.
-   For resident reports also run `cd scan/api && uv run uvicorn scan_api.main:app --port 8001` and `cd scan/web && npm run dev` (port 3001). This app proxies `/community/*` to 3001 and `/scan-api/*` to 8001; override with `SCAN_WEB_URL` / `SCAN_API_URL`.
 2. In `web/`, set `NEXT_PUBLIC_OFFLINE_TILES=on` in `.env.local`, then `npm run build && npm start` (or `npm run dev`).
 3. Turn Wi-Fi off and reload `/studio` once to confirm the basemap still draws.
 4. In the results dashboard, `1`–`3` pick a site and `L` cycles Everyone → Heat-vulnerable → Wheelchair users. The reveal: open on Slauson (most residents), press `L` twice, then follow "Show Mary McLeod Bethune Swimming Pool".
