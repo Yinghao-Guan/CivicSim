@@ -58,8 +58,9 @@ DEMO_EDGES: tuple[tuple[str, str, float, bool, float], ...] = (
     ("res_e3", "j_e", 3.0, True, 2.6),
     # Site C sits beside the eastern junction
     ("j_e", "site_c", 2.0, True, 1.6),
-    # The nearest cooling center that exists today is in the next neighborhood,
-    # out past the northern corner. It is the baseline's only destination.
+    # The nearest cooling center that exists today sits off in the far western
+    # corner of the area. It is the baseline's only destination, and it is a
+    # long walk from everyone: nobody reaches it inside the access threshold.
     ("j_bypass", "existing_center", 14.0, True, 11.0),
 )
 
@@ -91,27 +92,50 @@ DEMO_SITE_CAPACITY = 1800
 MODEL_VERSION = "demo_neighborhood_v1"
 POPULATION_VERSION = "demo_cohort_v1"
 
-#: Illustrative [longitude, latitude] for every graph node, used to draw routes.
+#: The frontend's demo area, as [south, west, north, east] in WGS84 degrees.
+#: Mirrors DEMO_AREA_SWNE in web/lib/demoArea.generated.ts, which the map
+#: workstream generates from scripts/demo_area.py. Every node below sits
+#: inside it, so routes render on the slice the frontend actually draws.
+DEMO_AREA_SWNE: tuple[float, float, float, float] = (
+    33.98100,
+    -118.26450,
+    33.99600,
+    -118.24500,
+)
+
+#: [longitude, latitude] for every graph node, used to draw routes.
 #:
-#: These position the demo over South LA so the map looks like a real place.
-#: They are not surveyed locations, and straight-line distance between two
-#: nodes is deliberately not proportional to the travel time of the edge
-#: joining them: the accessible bypass is long precisely because it winds.
+#: Site A, B and C are the real facilities the map workstream surveyed inside
+#: the demo area (docs/05-map-milestone-plan.md section 3.4):
+#:
+#:   site_b  Mary McLeod Bethune Swimming Pool
+#:   site_a  Augustus F. Hawkins Natural Park
+#:   site_c  Slauson Senior Multipurpose Center
+#:
+#: The remaining nodes are synthetic. They are placed so each edge's straight
+#: line is shorter than the walking distance its travel time implies at about
+#: 1.4 m/s, which is what makes a drawn route look like a walk down streets
+#: rather than a line through blocks. Two edges are deliberately far longer
+#: than their straight line: the stepped shortcut at res_w2, and the
+#: accessible bypass from j_c1, which is long precisely because it winds.
+#:
+#: Coordinates are presentation only. Nothing in the simulation reads them,
+#: so moving a node cannot change a route, a metric, or an invariant.
 NODE_LOCATIONS: dict[str, tuple[float, float]] = {
-    "res_w1": (-118.2996, 34.0142),
-    "res_w2": (-118.2990, 34.0112),
-    "j_w": (-118.2972, 34.0126),
-    "site_a": (-118.3000, 34.0100),
-    "site_b": (-118.2914, 34.0128),
-    "res_mid": (-118.2934, 34.0104),
-    "j_c1": (-118.2898, 34.0098),
-    "j_bypass": (-118.2884, 34.0148),
-    "j_e": (-118.2852, 34.0092),
-    "res_e1": (-118.2846, 34.0118),
-    "res_e2": (-118.2834, 34.0074),
-    "res_e3": (-118.2870, 34.0062),
-    "site_c": (-118.2820, 34.0080),
-    "existing_center": (-118.2902, 34.0196),
+    "res_w1": (-118.25352, 33.98650),
+    "res_w2": (-118.25395, 33.98519),
+    "j_w": (-118.25222, 33.98600),
+    "site_a": (-118.24738, 33.98991),
+    "site_b": (-118.25328, 33.98418),
+    "res_mid": (-118.25080, 33.98843),
+    "j_c1": (-118.24903, 33.99146),
+    "j_bypass": (-118.24911, 33.99414),
+    "j_e": (-118.24797, 33.99329),
+    "res_e1": (-118.24651, 33.99288),
+    "res_e2": (-118.24748, 33.99207),
+    "res_e3": (-118.24586, 33.99257),
+    "site_c": (-118.24726, 33.99450),
+    "existing_center": (-118.25971, 33.99229),
 }
 
 

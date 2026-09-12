@@ -12,7 +12,9 @@ import pytest
 
 from data.demo_neighborhood import (
     CANDIDATE_SITES,
+    DEMO_AREA_SWNE,
     DEMO_EDGES,
+    NODE_LOCATIONS,
     build_demo_cohort,
     build_demo_graph,
     site,
@@ -174,6 +176,44 @@ def test_evaluating_a_scenario_does_not_mutate_the_graph(graph, cohort):
 
     assert (graph.number_of_nodes(), graph.number_of_edges()) == before
     assert graph.edges["j_c1", "j_e"][ACCESSIBLE_ATTR] is False
+
+
+def test_every_node_sits_inside_the_frontend_demo_area(graph):
+    """A node outside the map slice would render off-screen or not at all."""
+    south, west, north, east = DEMO_AREA_SWNE
+
+    for node in graph.nodes:
+        lon, lat = NODE_LOCATIONS[node]
+        assert west < lon < east, f"{node} longitude {lon} is outside the demo area"
+        assert south < lat < north, f"{node} latitude {lat} is outside the demo area"
+
+
+def test_every_edge_is_geometrically_possible():
+    """A walk cannot be shorter than the straight line between its ends.
+
+    Guards the drawn map: if an edge's travel time implies less distance than
+    the gap between its nodes, the rendered route contradicts its own label.
+    """
+    metres_per_degree_lat = 110_996.0
+    metres_per_degree_lon = 92_315.0  # at latitude 34
+    walking_metres_per_minute = 84.0  # 1.4 m/s
+
+    for u, v, minutes, _accessible, _heat in DEMO_EDGES:
+        (lon_u, lat_u), (lon_v, lat_v) = NODE_LOCATIONS[u], NODE_LOCATIONS[v]
+        east_west = (lon_v - lon_u) * metres_per_degree_lon
+        north_south = (lat_v - lat_u) * metres_per_degree_lat
+        straight_line = (east_west**2 + north_south**2) ** 0.5
+
+        assert straight_line < minutes * walking_metres_per_minute, (
+            f"{u}-{v} claims {minutes} minutes but its nodes are "
+            f"{straight_line:.0f} m apart"
+        )
+
+
+def test_candidate_sites_sit_on_their_graph_node():
+    """The mapped facility and the simulation destination must be one place."""
+    for candidate in CANDIDATE_SITES:
+        assert candidate.location == NODE_LOCATIONS[candidate.node]
 
 
 def test_unknown_site_id_is_rejected():
