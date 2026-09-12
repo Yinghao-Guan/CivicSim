@@ -31,8 +31,8 @@ export default function ExperienceShell({ children }: { children: React.ReactNod
     if (nextStage && visualStage !== nextStage && !isHeroExit) setVisualStage(nextStage);
   }, [pathname, setVisualStage, visualStage]);
 
-  // /lab is the integration workbench: the live map and scenario panel, without the twin.
-  if (pathname.startsWith("/lab")) return children;
+  // The studio and the /lab workbench draw the real map themselves, without the twin.
+  if (pathname.startsWith("/lab") || pathname.startsWith("/studio")) return children;
 
   return (
     <div className={`experience-shell stage-${visualStage}`}>

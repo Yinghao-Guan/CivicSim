@@ -151,7 +151,7 @@ CANDIDATE_SITES: tuple[CandidateSite, ...] = (
     CandidateSite(
         id="site_a",
         facility_id="facility_a",
-        name="Site A",
+        name="Augustus F. Hawkins Natural Park",
         node="site_a",
         capacity=DEMO_SITE_CAPACITY,
         location=NODE_LOCATIONS["site_a"],
@@ -161,7 +161,7 @@ CANDIDATE_SITES: tuple[CandidateSite, ...] = (
     CandidateSite(
         id="site_b",
         facility_id="facility_b",
-        name="Site B",
+        name="Mary McLeod Bethune Swimming Pool",
         node="site_b",
         capacity=DEMO_SITE_CAPACITY,
         location=NODE_LOCATIONS["site_b"],
@@ -171,7 +171,7 @@ CANDIDATE_SITES: tuple[CandidateSite, ...] = (
     CandidateSite(
         id="site_c",
         facility_id="facility_c",
-        name="Site C",
+        name="Slauson Senior Multipurpose Center",
         node="site_c",
         capacity=DEMO_SITE_CAPACITY,
         location=NODE_LOCATIONS["site_c"],

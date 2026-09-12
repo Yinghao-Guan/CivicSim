@@ -20,7 +20,7 @@ export default function HeroScreen() {
 
   useEffect(() => {
     reset();
-    router.prefetch("/setup");
+    router.prefetch("/studio");
     return () => { if (timer.current) window.clearTimeout(timer.current); };
   }, [reset, router]);
 
@@ -28,7 +28,7 @@ export default function HeroScreen() {
     if (entering) return;
     setEntering(true);
     setVisualStage("entering");
-    timer.current = window.setTimeout(() => router.push("/setup"), reducedMotion ? 200 : 850);
+    timer.current = window.setTimeout(() => router.push("/studio"), reducedMotion ? 200 : 850);
   };
 
   return (
