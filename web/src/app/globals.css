@@ -513,16 +513,17 @@ a { text-decoration: none; }
 .studio-venue span { position: relative; z-index: 1; color: #b9b5ab; font-family: var(--font-geist-mono), monospace; font-size: 8.5px; letter-spacing: .08em; text-transform: uppercase; }
 
 .studio-stat--cooling strong { color: #2f68b8; }
-.studio-nearby { position: absolute; z-index: 2; right: 24px; bottom: 36px; width: 320px; padding: 12px 14px; border: 1px solid var(--studio-rule); border-radius: 14px; color: var(--studio-ink); background: rgba(247, 245, 239, .92); backdrop-filter: blur(14px); box-shadow: 0 24px 50px -36px rgba(40, 32, 20, .5); }
+.studio-nearby { position: absolute; z-index: 2; right: 24px; bottom: 48px; width: 320px; box-sizing: border-box; overflow: hidden; padding: 12px 14px; border: 1px solid var(--studio-rule); border-radius: 14px; color: var(--studio-ink); background: rgba(247, 245, 239, .92); backdrop-filter: blur(14px); box-shadow: 0 24px 50px -36px rgba(40, 32, 20, .5); }
 .studio-nearby.is-open { padding: 16px 16px 12px; }
 .studio-nearby__hint { display: flex; align-items: center; gap: 8px; color: var(--studio-body); font-size: 12px; }
 .studio-nearby__hint svg { flex: none; color: #2f68b8; }
-.studio-nearby header { display: flex; align-items: flex-start; justify-content: space-between; }
+.studio-nearby header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.studio-nearby header > div { min-width: 0; }
 .studio-nearby header small { color: var(--studio-quiet); font-size: 10.5px; }
 .studio-nearby header strong { display: block; margin-top: 2px; color: #2f68b8; font-size: 22px; font-weight: 560; letter-spacing: -.03em; }
 .studio-nearby header button { color: var(--studio-quiet); background: none; cursor: pointer; }
-.studio-nearby ol { margin-top: 12px; list-style: none; display: grid; gap: 4px; }
-.studio-nearby li { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 9px; }
+.studio-nearby ol { margin-top: 12px; list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.studio-nearby li { min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 9px; }
 .studio-nearby li.is-closest { background: rgba(47, 104, 184, .09); }
 .studio-nearby__rank { flex: none; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: rgba(47, 104, 184, .55); font-family: var(--font-geist-mono), monospace; font-size: 10px; }
 .is-closest .studio-nearby__rank { background: #2f68b8; }
