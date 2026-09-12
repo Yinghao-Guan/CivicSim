@@ -116,17 +116,38 @@ export interface ScenarioScene {
   unreachable: UnreachableAgent[];
   candidates: CandidateSite[];
   selectedSiteId: string | null;
+  /**
+   * Pull the mobility-constrained journeys forward and push the rest back.
+   *
+   * Nothing is filtered out: the other journeys stay on screen, faint, so the
+   * comparison is still visible rather than replaced by a different map.
+   */
+  focusMobility: boolean;
 }
 
+const MOBILITY_CONSTRAINED = "mobility_constrained";
+
+const isConstrained = (profile: string) => profile === MOBILITY_CONSTRAINED;
+
 /** Mobility-constrained journeys are drawn apart: they carry the equity story. */
-function routeColor(route: AgentRoute): [number, number, number, number] {
-  return route.profile === "mobility_constrained"
-    ? rgba(palette.intervention, 235)
-    : rgba(palette.simulation, 200);
+function routeColor(
+  route: AgentRoute,
+  focusMobility: boolean,
+): [number, number, number, number] {
+  if (isConstrained(route.profile)) {
+    return rgba(palette.intervention, focusMobility ? 255 : 235);
+  }
+  return rgba(palette.simulation, focusMobility ? 55 : 200);
+}
+
+/** Widths in the same order the colours above imply. */
+function routeWidth(route: AgentRoute, focusMobility: boolean): number {
+  if (!focusMobility) return 11;
+  return isConstrained(route.profile) ? 15 : 5;
 }
 
 export function scenarioLayers(scene: ScenarioScene): Layer[] {
-  const { routes, unreachable, candidates, selectedSiteId } = scene;
+  const { routes, unreachable, candidates, selectedSiteId, focusMobility } = scene;
   const origins = routes
     .map((route) => ({ route, position: route.path[0] }))
     .filter((d): d is { route: AgentRoute; position: Coordinate } => Boolean(d.position));
@@ -139,38 +160,57 @@ export function scenarioLayers(scene: ScenarioScene): Layer[] {
       id: "scenario-routes-casing",
       data: routes,
       getPath: (d) => d.path,
-      getColor: rgba(palette.chrome, 150),
-      getWidth: 17,
-      widthMinPixels: 8,
+      getColor: (d) =>
+        rgba(palette.chrome, focusMobility && !isConstrained(d.profile) ? 40 : 150),
+      getWidth: (d) => routeWidth(d, focusMobility) + 6,
+      widthMinPixels: focusMobility ? 4 : 8,
       widthMaxPixels: 26,
       capRounded: true,
       jointRounded: true,
+      updateTriggers: {
+        getColor: [focusMobility],
+        getWidth: [focusMobility],
+      },
     }),
     new PathLayer<AgentRoute>({
       id: "scenario-routes",
       data: routes,
       getPath: (d) => d.path,
-      getColor: routeColor,
-      getWidth: 11,
-      widthMinPixels: 5,
-      widthMaxPixels: 18,
+      getColor: (d) => routeColor(d, focusMobility),
+      getWidth: (d) => routeWidth(d, focusMobility),
+      widthMinPixels: focusMobility ? 3 : 5,
+      widthMaxPixels: 20,
       capRounded: true,
       jointRounded: true,
       pickable: true,
+      updateTriggers: {
+        getColor: [focusMobility],
+        getWidth: [focusMobility],
+      },
     }),
     // Where each reached resident started.
     new ScatterplotLayer<{ route: AgentRoute; position: Coordinate }>({
       id: "scenario-origins",
       data: origins,
       getPosition: (d) => d.position,
-      getFillColor: (d) => routeColor(d.route),
-      getRadius: 15,
-      radiusMinPixels: 5,
+      getFillColor: (d) => routeColor(d.route, focusMobility),
+      getRadius: (d) =>
+        focusMobility && !isConstrained(d.route.profile) ? 7 : 15,
+      radiusMinPixels: focusMobility ? 3 : 5,
       radiusMaxPixels: 15,
       stroked: true,
-      getLineColor: rgba(palette.chrome, 200),
+      getLineColor: (d) =>
+        rgba(
+          palette.chrome,
+          focusMobility && !isConstrained(d.route.profile) ? 60 : 200,
+        ),
       lineWidthMinPixels: 1.5,
       pickable: true,
+      updateTriggers: {
+        getFillColor: [focusMobility],
+        getRadius: [focusMobility],
+        getLineColor: [focusMobility],
+      },
     }),
     // Residents who could not reach the site. Kept visible on purpose: they
     // are the point of the equity reveal, not noise to hide (doc 01 §11.3).
@@ -178,14 +218,24 @@ export function scenarioLayers(scene: ScenarioScene): Layer[] {
       id: "scenario-unreachable",
       data: unreachable,
       getPosition: (d) => d.origin,
-      getFillColor: rgba(palette.heat, 225),
-      getRadius: 15,
-      radiusMinPixels: 5,
+      // A constrained resident who is cut off is the sharpest form of the
+      // equity point, so focus mode keeps these at full strength.
+      getFillColor: (d) =>
+        rgba(
+          palette.heat,
+          focusMobility && !isConstrained(d.profile) ? 70 : 225,
+        ),
+      getRadius: (d) => (focusMobility && !isConstrained(d.profile) ? 7 : 15),
+      radiusMinPixels: focusMobility ? 3 : 5,
       radiusMaxPixels: 15,
       stroked: true,
       getLineColor: rgba(palette.chrome, 200),
       lineWidthMinPixels: 1.5,
       pickable: true,
+      updateTriggers: {
+        getFillColor: [focusMobility],
+        getRadius: [focusMobility],
+      },
     }),
     // A halo marking the site under test, so which proposal is on screen is
     // readable without looking back at the panel.

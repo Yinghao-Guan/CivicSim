@@ -56,6 +56,7 @@ export default function CityMap({ onReady }: CityMapProps) {
   const overlayRef = useRef<MapboxOverlay | null>(null);
   const scenarios = useScenarios();
   const { active, candidates, activeId } = scenarios;
+  const [focusMobility, setFocusMobility] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -182,12 +183,21 @@ export default function CityMap({ onReady }: CityMapProps) {
         unreachable: active.unreachable_agents,
         candidates,
         selectedSiteId: active.selected_site,
+        focusMobility,
       }),
     });
+  }, [active, candidates, focusMobility, ready]);
 
-    // Fly to what this scenario covers. Only for proposals: the baseline
-    // reaches nobody, so there are no routes to frame and pulling the camera
-    // to a handful of stranded origins would misrepresent it.
+  // Framing is deliberately a separate effect from the layers above. Toggling
+  // the mobility focus restyles the same journeys and must not fly the camera
+  // somewhere new mid-explanation.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !active) return;
+
+    // Only for proposals: the baseline reaches nobody, so there are no routes
+    // to frame and pulling the camera to a handful of stranded origins would
+    // misrepresent it.
     if (active.selected_site === null) {
       frameDemoArea(map);
       return;
@@ -217,7 +227,11 @@ export default function CityMap({ onReady }: CityMapProps) {
           context is affected.
         </div>
       )}
-      <ScenarioPanel {...scenarios} />
+      <ScenarioPanel
+        {...scenarios}
+        focusMobility={focusMobility}
+        onToggleFocusMobility={() => setFocusMobility((on) => !on)}
+      />
       {selected && <BuildingPanel building={selected} onClose={clearSelection} />}
       <button
         type="button"

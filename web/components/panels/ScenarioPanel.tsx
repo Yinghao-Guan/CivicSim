@@ -8,12 +8,18 @@
  * leader only by comparing two numbers the backend produced.
  */
 
-import type { SimulationResponse } from "@/lib/contract";
+import type { CandidateSite, SimulationResponse } from "@/lib/contract";
+import { facilityName, facilityShortName } from "@/lib/facilities";
 import {
   SHADE_SITE_ID,
   SITE_B_APPROACH_SEGMENTS,
 } from "@/lib/interventions";
 import { BASELINE_ID, type ScenarioState } from "@/lib/useScenarios";
+
+interface ScenarioPanelProps extends ScenarioState {
+  focusMobility: boolean;
+  onToggleFocusMobility: () => void;
+}
 
 const integer = new Intl.NumberFormat("en-US");
 const share = new Intl.NumberFormat("en-US", {
@@ -124,8 +130,64 @@ function EditedProposal({
   );
 }
 
+/**
+ * How the numbers above were produced.
+ *
+ * Everything shown comes from the response's own `run` block and `warnings`;
+ * nothing is restated from memory. Collapsed by default so it never competes
+ * with the metrics, but one click from any judge who asks.
+ */
+function HowCalculated({ scenario }: { scenario: SimulationResponse }) {
+  const { run } = scenario;
+
+  return (
+    <details className="how">
+      <summary>How this is calculated</summary>
+
+      <p className="how-lede">
+        Residents are <strong>synthetic</strong> — modeled travel needs and
+        constraints, never real people. Every figure is a deterministic
+        simulation over a walking graph, produced to{" "}
+        <strong>compare scenarios against each other</strong>. These are not
+        forecasts of what will happen.
+      </p>
+
+      <dl className="how-fields">
+        <dt>Model</dt>
+        <dd>{run.model_version}</dd>
+
+        <dt>Population</dt>
+        <dd>{run.population_version}</dd>
+
+        <dt>Agents simulated</dt>
+        <dd>{integer.format(run.agent_count)}</dd>
+
+        <dt>Routes returned</dt>
+        <dd>{integer.format(run.route_sample_count)}</dd>
+
+        <dt>Seed</dt>
+        <dd>{run.seed === null ? "none — cohort is enumerated" : run.seed}</dd>
+      </dl>
+
+      {scenario.warnings.length > 0 && (
+        <ul className="how-warnings">
+          {scenario.warnings.map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      )}
+    </details>
+  );
+}
+
 /** Side-by-side once more than one scenario has been run. */
-function Comparison({ results }: { results: Record<string, SimulationResponse> }) {
+function Comparison({
+  results,
+  candidates,
+}: {
+  results: Record<string, SimulationResponse>;
+  candidates: CandidateSite[];
+}) {
   // Canonical runs only: an edited run shares its site's name, so including it
   // would list the same site twice with no way to tell the rows apart. The
   // edit gets its own before/after panel instead.
@@ -153,7 +215,13 @@ function Comparison({ results }: { results: Record<string, SimulationResponse> }
         <tbody>
           {runs.map((run) => (
             <tr key={run.scenario_id}>
-              <th scope="row">{run.selected_site}</th>
+              <th scope="row">
+                {candidates.find((c) => c.id === run.selected_site)?.name ??
+                  run.selected_site}
+                <span className="compare-facility">
+                  {facilityShortName(run.selected_site)}
+                </span>
+              </th>
               <td className={run.scenario_id === mostReach ? "compare-lead" : undefined}>
                 {integer.format(run.metrics.population_reached)}
               </td>
@@ -170,15 +238,17 @@ function Comparison({ results }: { results: Record<string, SimulationResponse> }
       </table>
       {runs.length > 1 && mostReach !== mostAccessible && (
         <p className="compare-note">
-          {mostReach} reaches the most residents, but {mostAccessible} serves
-          mobility-constrained residents better. There is no single best site.
+          {facilityShortName(mostReach)} reaches the most residents, but{" "}
+          {facilityShortName(mostAccessible)} serves mobility-constrained
+          residents better. There is no single best site.
         </p>
       )}
     </div>
   );
 }
 
-export default function ScenarioPanel(state: ScenarioState) {
+export default function ScenarioPanel(props: ScenarioPanelProps) {
+  const { focusMobility, onToggleFocusMobility, ...state } = props;
   const {
     load,
     loadError,
@@ -230,9 +300,13 @@ export default function ScenarioPanel(state: ScenarioState) {
       <header className="panel-head">
         <div>
           <h2>{edited ? "Site B + shade" : "Cooling center"}</h2>
-          <p className="panel-id">
-            {active ? active.scenario_id : "—"} · {active?.run.model_version}
-          </p>
+          {facilityName(active?.selected_site ?? null) ? (
+            <p className="panel-facility">
+              {facilityName(active?.selected_site ?? null)}
+            </p>
+          ) : (
+            <p className="panel-id">{active?.scenario_id ?? "—"}</p>
+          )}
         </div>
       </header>
 
@@ -269,6 +343,20 @@ export default function ScenarioPanel(state: ScenarioState) {
           )}
           <Metrics scenario={active} />
 
+          {active.routes.length > 0 && (
+            <button
+              type="button"
+              className={`focus-toggle${focusMobility ? " is-on" : ""}`}
+              aria-pressed={focusMobility}
+              onClick={onToggleFocusMobility}
+            >
+              <span className="focus-dot" aria-hidden="true" />
+              {focusMobility
+                ? "Showing mobility-constrained"
+                : "Focus mobility-constrained"}
+            </button>
+          )}
+
           {edited && (
             <EditedProposal
               before={active.selected_site ? results[active.selected_site] : undefined}
@@ -294,7 +382,13 @@ export default function ScenarioPanel(state: ScenarioState) {
         <p className="panel-id">Running…</p>
       )}
 
-      <Comparison results={results} />
+      {/*
+        Hidden while an edit is on screen. The edit's own before/after is the
+        thing being explained at that moment, and on a 768px-tall projector the
+        full table pushes it below the fold — the one place a scroll would cost
+        the demo. Removing the shade brings the table straight back.
+      */}
+      {!edited && <Comparison results={results} candidates={candidates} />}
 
       {Object.keys(results).length <= candidates.length && (
         <button
@@ -307,9 +401,7 @@ export default function ScenarioPanel(state: ScenarioState) {
         </button>
       )}
 
-      {active?.warnings.length ? (
-        <p className="panel-footnote">{active.warnings.join(" ")}</p>
-      ) : null}
+      {active && <HowCalculated scenario={active} />}
     </aside>
   );
 }
