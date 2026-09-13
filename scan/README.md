@@ -54,7 +54,10 @@ app; the API is proxied through it at `/scan-api`, so one tunnel is enough:
 cloudflared tunnel --url http://localhost:3000
 ```
 
-Open `https://<tunnel>/community/board` on the laptop. Its QR code points phones at the
+Open `https://<tunnel>/community/board` on the laptop, or keep the laptop on
+`http://localhost:3000` and set `NEXT_PUBLIC_PHONE_URL=https://<tunnel>/community`
+in `scan/web/.env.local` (restart `scan/web`) so the board's QR code still points
+phones at the tunnel. Its QR code points phones at the
 same tunnel, so the audience can scan it straight off the screen. "Clear all
 reports" at the bottom of the board wipes test data before a demo.
 

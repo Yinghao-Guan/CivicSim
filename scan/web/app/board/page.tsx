@@ -155,8 +155,9 @@ function PhoneInvite() {
   const [url, setUrl] = useState("");
 
   useEffect(() => {
-    // The phone page is this zone's root, under the main app's /community path.
-    const phoneUrl = window.location.origin + "/community";
+    // The phone page is this zone's root, under the main app's /community path. When the
+    // board runs on localhost, NEXT_PUBLIC_PHONE_URL (e.g. the tunnel) gives phones a reachable one.
+    const phoneUrl = process.env.NEXT_PUBLIC_PHONE_URL || window.location.origin + "/community";
     setUrl(phoneUrl);
     QRCode.toDataURL(phoneUrl, { margin: 1, width: 360, color: { dark: "#1f1c17", light: "#fbf8f2" } })
       .then(setQr)
