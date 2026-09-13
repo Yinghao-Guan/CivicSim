@@ -48,7 +48,7 @@ For demo day, follow the runbook in [`../docs/05-map-milestone-plan.md`](../docs
 Run four processes (each has a configuration in `../.claude/launch.json`):
 
 ```bash
-cd backend && uv run uvicorn main:app --port 8000
+cd backend && uv run --env-file .env uvicorn main:app --port 8000   # .env holds OPENAI_API_KEY (see backend/.env.example)
 cd scan/api && uv run uvicorn scan_api.main:app --port 8001
 cd scan/web && npm run dev      # :3001, reached through :3000/community
 cd web && npm run dev           # :3000
