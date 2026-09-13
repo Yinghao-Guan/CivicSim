@@ -62,11 +62,14 @@ The initial contract intentionally matches the minimal FastAPI surface already s
 GET  /baseline
 POST /simulate
 GET  /scenario/{id}
+POST /ai/recommend
 ```
 
 Do not add additional endpoints merely for architectural cleanliness.
 
-An AI/planning endpoint is **not part of this frozen v1 contract yet**. AI is a later P1 layer and must consume deterministic simulation results rather than replace them.
+An AI/planning endpoint was not part of the original frozen v1 contract. It is now added, additively, as `POST /ai/recommend` (section 19). The endpoints above are unchanged.
+
+AI is a P1 layer and must consume deterministic simulation results rather than replace them.
 
 ---
 
@@ -758,3 +761,117 @@ Frontend/backend integration is considered successful when:
 10. No integration step requires modifying the agreed response schema.
 
 At that point, the core CivicSim demo loop is integration-ready.
+---
+
+## 19. `POST /ai/recommend`
+
+**Added after v1, additively.** Sections 1–18 are unchanged; a client that
+ignores this endpoint keeps working exactly as before.
+
+### Purpose
+
+Interpret a user's stated priorities and recommend one of the existing
+candidate sites, with the tradeoff stated in plain language.
+
+### Trust boundary
+
+The simulation stays the only source of numbers (`AGENTS.md` §8). The model is
+given already-computed results and may return only bounded semantic fields: a
+site id from the canonical set, two pieces of prose, and one action drawn from
+a fixed list. **The response schema has no numeric fields**, so the model
+cannot return a metric. The backend attaches the authoritative metrics from the
+deterministic run after validating the model's reply.
+
+An unrecognised site or action is rejected, not passed through.
+
+### Request
+
+```json
+{ "goal": "reach as many people as possible without leaving wheelchair users behind" }
+```
+
+| Field | Type | Required | Meaning |
+| --- | --- | :---: | --- |
+| `goal` | string | yes | The user's priorities, free text, 1–500 characters |
+
+### Response — `200 OK`
+
+```json
+{
+  "recommended_site": "site_b",
+  "summary": "Site B serves mobility-constrained residents far better...",
+  "tradeoff": "It reaches fewer residents overall than Site C.",
+  "suggested_action": "add_site_b_shade",
+  "evidence": [
+    {
+      "site_id": "site_a",
+      "name": "Site A",
+      "metrics": {
+        "population_reached": 1300,
+        "heat_vulnerable_reached": 400,
+        "wheelchair_access": 0.0,
+        "average_heat_exposure": 8.54,
+        "capacity_utilization": 0.22
+      }
+    }
+  ],
+  "model": "gpt-6-astra"
+}
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `recommended_site` | string | `site_a`, `site_b` or `site_c` |
+| `summary` | string | Why this site fits the stated priorities |
+| `tradeoff` | string | What the choice gives up |
+| `suggested_action` | string | `none` or `add_site_b_shade` |
+| `evidence` | object[] | Authoritative metrics for **every** candidate, from the simulation |
+| `model` | string | Model that produced the semantic fields |
+| `source` | string | `live` or `cached` (see below) |
+| `captured_at` | string or null | Capture date when `source` is `cached`; null when `live` |
+
+`evidence` entries reuse the metrics schema from section 7 unchanged. The
+frontend must display numbers from `evidence`, never from `summary` or
+`tradeoff`.
+
+`suggested_action` of `add_site_b_shade` is a prompt for the user to run the
+existing `POST /simulate` shade flow (section 6). It does not itself change any
+scenario, and the AI never produces a simulation result.
+
+### Cached fallback
+
+If the assistant is unreachable and the `goal` matches one of the four preset
+goals character for character, the endpoint serves a previously validated
+reply from that model instead of failing, with `source` set to `cached` and
+`captured_at` set to its capture date.
+
+A cached reply carries the same four semantic fields and **no metric values**.
+`evidence` is still computed fresh from the deterministic simulation for that
+request, exactly as for a live answer, so displayed numbers are never stale.
+
+A client must show cached output as cached. It must never be presented as a
+live model response.
+
+Free text that is not an exact preset goal does **not** fall back. It returns
+the error below, because selecting a canned answer for an unseen goal would be
+guessing.
+
+### Errors
+
+The assistant is optional. When it is unavailable the rest of the API is
+unaffected.
+
+```json
+{
+  "detail": {
+    "code": "ai_unavailable",
+    "message": "OPENAI_API_KEY is not set, so Ask CivicSim is unavailable."
+  }
+}
+```
+
+Returned as `503`. Causes include a missing API key, a timeout, a provider
+error, or a model refusal. The frontend should show an assistant-only failure
+state and leave the simulation UI working.
+
+An empty or overlong `goal` is a standard `422`.

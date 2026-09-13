@@ -6,19 +6,28 @@ renders the contract's response shapes. No metric is computed here.
 Endpoints follow docs/03-api-contract.md sections 5, 6 and 12.
 """
 
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+from ai import fallback, planner
 from api.schemas import (
+    AiRecommendationResponse,
+    AiRecommendRequest,
     BaselineResponse,
     CoolingWalkModel,
     NearestCoolingResponse,
     ScenarioResponse,
     SimulateRequest,
+    SiteEvidenceModel,
 )
-from api.serializers import to_candidate_model, to_scenario_response
+from api.serializers import (
+    to_candidate_model,
+    to_metrics_model,
+    to_scenario_response,
+)
 from api.store import ScenarioStore, derive_scenario_id
 from data.cooling_places import cooling_places
 from data.demo_neighborhood import (
@@ -45,6 +54,9 @@ FRONTEND_ORIGIN = "http://localhost:3000"
 #: otherwise change nothing while the response still looked successful.
 SUPPORTED_SHADE_SEGMENTS = SHADEABLE_EDGE_IDS
 
+#: The only site the shade intervention exists for.
+SHADE_SITE_ID = "site_b"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -62,6 +74,12 @@ async def lifespan(app: FastAPI):
     app.state.graph = graph
     app.state.cohort = cohort
     app.state.store = store
+
+    # Build the OpenAI client off the startup path. It is a daemon thread that
+    # makes no API call and swallows its own errors, so startup is not delayed
+    # by it and the simulation never waits on, or depends on, the AI layer.
+    threading.Thread(target=planner.prewarm, name="ai-prewarm", daemon=True).start()
+
     yield
     app.state.store = None
 
@@ -158,6 +176,105 @@ def nearest_cooling(
     ]
     results.sort(key=lambda result: result.walk_metres)
     return NearestCoolingResponse(origin=(lon, lat), places=results[:limit])
+
+
+@app.post("/ai/recommend", response_model=AiRecommendationResponse)
+def ai_recommend(request: AiRecommendRequest) -> AiRecommendationResponse:
+    """Interpret a user's priorities over the already-computed scenarios.
+
+    The deterministic results are gathered first and passed to the model as
+    evidence. Whatever comes back is validated against what the simulation
+    actually supports, then the authoritative metrics are attached here -
+    the model never supplies a number (contract section 19).
+    """
+    evidence = _site_evidence()
+    if not evidence:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "ai_unavailable",
+                "message": "No simulated scenarios are available to reason over.",
+            },
+        )
+
+    captured_at = None
+    try:
+        recommendation = planner.recommend(
+            request.goal, [e.model_dump() for e in evidence]
+        )
+        source = "live"
+        model = planner.model_name()
+    except planner.PlannerUnavailable as exc:
+        # The assistant is unreachable. For the four preset goals we can serve
+        # a previously validated reply rather than nothing - clearly labelled,
+        # and still with fresh evidence attached below. Anything else keeps the
+        # unavailable state: picking a canned answer for a goal the user typed
+        # would be guessing.
+        cached = fallback.lookup(request.goal)
+        if cached is None:
+            raise HTTPException(
+                status_code=503,
+                detail={"code": "ai_unavailable", "message": str(exc)},
+            ) from exc
+        recommendation = cached.as_recommendation()
+        source = "cached"
+        model = fallback.CAPTURED_MODEL
+        captured_at = fallback.CAPTURED_AT
+
+    known = {e.site_id for e in evidence}
+    if recommendation.recommended_site not in known:
+        # The schema should make this impossible; refuse rather than trust it.
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "ai_unavailable",
+                "message": "The assistant named a site this demo does not have.",
+            },
+        )
+
+    return AiRecommendationResponse(
+        recommended_site=recommendation.recommended_site,
+        summary=recommendation.summary,
+        tradeoff=recommendation.tradeoff,
+        suggested_action=_validated_action(
+            recommendation.suggested_action, recommendation.recommended_site
+        ),
+        # Fresh from the simulation either way: a cached reply gets the same
+        # evidence a live one would, computed for this request.
+        evidence=evidence,
+        model=model,
+        source=source,
+        captured_at=captured_at,
+    )
+
+
+def _site_evidence() -> list[SiteEvidenceModel]:
+    """Authoritative metrics for every candidate, from the canonical runs."""
+    evidence = []
+    for candidate in CANDIDATE_SITES:
+        result = app.state.store.get(candidate.id)
+        if result is None:
+            continue
+        evidence.append(
+            SiteEvidenceModel(
+                site_id=candidate.id,
+                name=candidate.name,
+                metrics=to_metrics_model(result.metrics),
+            )
+        )
+    return evidence
+
+
+def _validated_action(action: str, recommended_site: str) -> str:
+    """Drop an action the simulation cannot actually carry out.
+
+    Shade exists only for Site B. Proposing it anywhere else would offer a
+    button that could not be honoured, so it degrades to `none` rather than
+    reaching the interface.
+    """
+    if action == "add_site_b_shade" and recommended_site == SHADE_SITE_ID:
+        return action
+    return "none"
 
 
 def _resolve_site(cooling_center: str):

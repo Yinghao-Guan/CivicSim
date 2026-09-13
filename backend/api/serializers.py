@@ -100,6 +100,11 @@ def to_candidate_model(site: CandidateSite) -> CandidateSiteModel:
     )
 
 
+def to_metrics_model(metrics: Metrics) -> MetricsModel:
+    """Public alias: the AI endpoint attaches these as authoritative evidence."""
+    return _metrics(metrics)
+
+
 def _metrics(metrics: Metrics) -> MetricsModel:
     return MetricsModel(
         population_reached=metrics.population_reached,
