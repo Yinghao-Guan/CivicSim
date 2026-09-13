@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import PlannerCard from "@/components/panels/PlannerCard";
 import type { StudioLens, StudioStage } from "@/components/studio/StudioMap";
 import type { CandidateSite, Coordinate, SimulationResponse } from "@/lib/contract";
 import { FACILITY_LABELS, fetchNearestCooling, type NearestCooling } from "@/lib/cooling";
@@ -145,6 +146,17 @@ export default function StudioScreen() {
     setFocusSiteId(siteId);
     if (stage === "brief") setStage("sites");
     if (results[siteId]) select(siteId);
+  };
+
+  /**
+   * The assistant's shade suggestion, honoured by the real intervention.
+   *
+   * It focuses Site B and turns on the same shade run the button below uses,
+   * so the numbers that follow come from the simulator re-running the graph.
+   */
+  const applyShadeSuggestion = () => {
+    focusSite(SHADE_SITE_ID);
+    if (!shadeOn) toggleShade();
   };
 
   const heatRange = useMemo(() => {
@@ -385,6 +397,19 @@ export default function StudioScreen() {
                   </motion.aside>
                 )}
               </AnimatePresence>
+
+              {/*
+                The assistant sits directly under the equity reveal, before
+                the detailed facts: it reads the runs already on screen, and
+                its one suggested action hands straight to the real shade
+                intervention below rather than producing a result of its own.
+              */}
+              <PlannerCard
+                onFocusSite={focusSite}
+                onApplyShade={applyShadeSuggestion}
+                shadeActive={showingShade}
+                busy={running !== null}
+              />
 
               <dl className="studio-facts">
                 <div><dt>Heat exposure en route</dt><dd>{scenario.metrics.average_heat_exposure.toFixed(1)} min</dd></div>

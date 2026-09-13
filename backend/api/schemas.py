@@ -7,6 +7,8 @@ schemas describe the wire format and nothing else.
 Coordinates are always [longitude, latitude].
 """
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 Coordinate = tuple[float, float]
@@ -133,3 +135,38 @@ class ErrorDetail(BaseModel):
 
     code: str
     message: str
+
+
+class AiRecommendRequest(BaseModel):
+    """docs/03-api-contract.md section 19."""
+
+    goal: str = Field(min_length=1, max_length=500)
+
+
+class SiteEvidenceModel(BaseModel):
+    """Authoritative metrics for one candidate, straight from the simulation."""
+
+    site_id: str
+    name: str
+    metrics: MetricsModel
+
+
+class AiRecommendationResponse(BaseModel):
+    """The model's bounded reply, plus the evidence it was reasoning over.
+
+    The semantic fields come from the model; `evidence` never does. A client
+    displays numbers from `evidence` only.
+    """
+
+    recommended_site: str
+    summary: str
+    tradeoff: str
+    suggested_action: str
+    evidence: list[SiteEvidenceModel]
+    model: str
+    #: `live` when the model answered this request; `cached` when the assistant
+    #: was unreachable and a previously validated reply was served instead.
+    #: Never omitted, so a client cannot mistake one for the other.
+    source: Literal["live", "cached"]
+    #: When a cached reply was captured. Null for a live answer.
+    captured_at: str | None = None
