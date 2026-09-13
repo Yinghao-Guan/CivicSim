@@ -331,3 +331,9 @@ td.bad { color: var(--signal); font-weight: 650; }
 .report-delete:focus-visible { opacity: 1; }
 .report-delete:hover { color: #fff; background: var(--signal); border-color: var(--signal); }
 @media (hover: none) { .report-delete { opacity: 1; } }
+
+/* Reports that existed before the board opened, collapsed by default. */
+.earlier { border-top: 1px solid var(--line); padding-top: 10px; }
+.earlier-toggle { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 13px; font-weight: 560; cursor: pointer; }
+.earlier-toggle:hover { background: var(--card); color: var(--ink); }
+.earlier .report-list { margin-top: 6px; }

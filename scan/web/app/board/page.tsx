@@ -14,12 +14,14 @@ const POLL_MS = 2500;
 export default function BoardPage() {
   const [area, setArea] = useState<Area | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
+  const [earlier, setEarlier] = useState<Report[]>([]);
+  const [showEarlier, setShowEarlier] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const known = useRef<Set<string> | null>(null);
-  // Reports that already existed when the board opened. They stay stored but are not
-  // shown: every visit starts on the waiting screen and only follows new submissions.
+  // Reports that already existed when the board opened. The board still starts on the
+  // waiting screen and follows new submissions; these sit in a collapsed "Earlier" list.
   const history = useRef<Set<string> | null>(null);
 
   useEffect(() => {
@@ -32,6 +34,7 @@ export default function BoardPage() {
       setError(null);
       if (!history.current) history.current = new Set(all.map((r) => r.id));
       const next = all.filter((r) => !history.current!.has(r.id));
+      setEarlier(all.filter((r) => history.current!.has(r.id)));
       if (known.current) {
         const arrived = next.filter((r) => !known.current!.has(r.id));
         if (arrived.length) {
@@ -59,6 +62,7 @@ export default function BoardPage() {
       await clearReports();
       known.current = new Set();
       setReports([]);
+      setEarlier([]);
       setSelected(null);
     } catch (e) {
       setError((e as Error).message);
@@ -70,6 +74,7 @@ export default function BoardPage() {
     try {
       await deleteReport(report.id);
       known.current?.delete(report.id);
+      setEarlier((list) => list.filter((r) => r.id !== report.id));
       setReports((list) => {
         const next = list.filter((r) => r.id !== report.id);
         setSelected((current) => (current === report.id ? next[0]?.id ?? null : current));
@@ -80,7 +85,36 @@ export default function BoardPage() {
     }
   }, []);
 
-  const current = reports.find((r) => r.id === selected) ?? null;
+  const current = [...reports, ...earlier].find((r) => r.id === selected) ?? null;
+
+  const item = (r: Report) => (
+    <li key={r.id}>
+      <button
+        className={`report-item ${r.id === selected ? "selected" : ""}`}
+        onClick={() => {
+          setSelected(r.id);
+          setFresh((f) => { const n = new Set(f); n.delete(r.id); return n; });
+        }}
+      >
+        <img src={reportPhotoUrl(r.id)} alt="" />
+        <span className="stack tight">
+          <strong>{r.assessment.issue.label}</strong>
+          <span className="tiny muted">
+            {timeAgo(r.created_at)} · {statusLabel(r)}
+          </span>
+        </span>
+        {fresh.has(r.id) && <span className="new">new</span>}
+      </button>
+      <button
+        className="report-delete"
+        aria-label={`Delete report ${r.id}`}
+        title="Delete this report"
+        onClick={() => remove(r)}
+      >
+        ×
+      </button>
+    </li>
+  );
 
   return (
     <>
@@ -89,45 +123,26 @@ export default function BoardPage() {
       <aside className="board-side">
         <header className="board-heading">
           <h1>Resident reports</h1>
-          <p className="tiny muted">Live from residents&rsquo; phones, since this board opened.</p>
+          <p className="tiny muted">New reports appear live as residents submit them.</p>
         </header>
 
         {error && <p className="small warn">{error}</p>}
 
-        <ol className="report-list">
-          {reports.map((r) => (
-            <li key={r.id}>
-              <button
-                className={`report-item ${r.id === selected ? "selected" : ""}`}
-                onClick={() => {
-                  setSelected(r.id);
-                  setFresh((f) => { const n = new Set(f); n.delete(r.id); return n; });
-                }}
-              >
-                <img src={reportPhotoUrl(r.id)} alt="" />
-                <span className="stack tight">
-                  <strong>{r.assessment.issue.label}</strong>
-                  <span className="tiny muted">
-                    {timeAgo(r.created_at)} · {statusLabel(r)}
-                  </span>
-                </span>
-                {fresh.has(r.id) && <span className="new">new</span>}
-              </button>
-              <button
-                className="report-delete"
-                aria-label={`Delete report ${r.id}`}
-                title="Delete this report"
-                onClick={() => remove(r)}
-              >
-                ×
-              </button>
-            </li>
-          ))}
-        </ol>
+        <ol className="report-list">{reports.map(item)}</ol>
+
+        {earlier.length > 0 && (
+          <div className="earlier">
+            <button className="earlier-toggle" onClick={() => setShowEarlier((open) => !open)} aria-expanded={showEarlier}>
+              <span>Earlier reports ({earlier.length})</span>
+              <span aria-hidden="true">{showEarlier ? "−" : "+"}</span>
+            </button>
+            {showEarlier && <ol className="report-list">{earlier.map(item)}</ol>}
+          </div>
+        )}
 
         <PhoneInvite />
 
-        {reports.length > 0 && (
+        {reports.length + earlier.length > 0 && (
           <button className="link-button tiny" onClick={clear}>Clear all reports</button>
         )}
       </aside>
