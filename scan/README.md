@@ -3,9 +3,9 @@
 Photograph a street issue → locate it → detect what's wrong → show the fix and
 what fixing it changes in the neighborhood model.
 
-**Isolation rule:** everything lives in `scan/`. Nothing outside it is edited,
-and the main app (`web/`, `backend/`) does not know this exists. To drop the
-feature, delete `scan/`.
+Everything for this feature lives in `scan/`. The main app only proxies to it:
+`web/next.config.ts` rewrites `/community/*` and `/scan-api/*`, and `/start`
+and the studio's nav bar link to `/community/board`.
 
 ```
 scan/api   FastAPI on :8001   photo → EXIF GPS + Gemini detection; issue + location → fix + modeled impact
@@ -33,7 +33,7 @@ uv run uvicorn scan_api.main:app --port 8001
 ```bash
 cd scan/web
 npm install
-npm run dev                 # http://localhost:3001
+npm run dev                 # :3001 — open it through http://localhost:3000/community/board
 ```
 
 Without a Gemini key everything still works except automatic detection: the
@@ -57,9 +57,11 @@ cloudflared tunnel --url http://localhost:3000
 Open `https://<tunnel>/community/board` on the laptop, or keep the laptop on
 `http://localhost:3000` and set `NEXT_PUBLIC_PHONE_URL=https://<tunnel>/community`
 in `scan/web/.env.local` (restart `scan/web`) so the board's QR code still points
-phones at the tunnel. Its QR code points phones at the
-same tunnel, so the audience can scan it straight off the screen. "Clear all
-reports" at the bottom of the board wipes test data before a demo.
+phones at the tunnel, and the audience can scan it straight off the screen.
+
+The board opens on a waiting screen and jumps to each new report; reports that
+existed before it opened are under "Earlier reports". "Clear all reports" at
+the bottom wipes test data before a demo.
 
 Note: iOS Safari and Android's photo picker usually strip GPS from uploads, so
 expect the manual pin / current-location path on phones. Photos uploaded from

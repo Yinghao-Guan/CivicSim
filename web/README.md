@@ -17,7 +17,7 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-Start the backend for live results (`cd ../backend && uv run uvicorn main:app --reload`; it serves `http://localhost:8000`).
+The studio needs the backend on `http://localhost:8000` and the Community Board needs the scan app; see the root [`README.md`](../README.md) for starting all four services.
 
 `npm run build` writes to the same `.next/` the dev server uses — stop the dev server first.
 
@@ -33,31 +33,20 @@ Copy `.env.example` to `.env.local` and edit it. `NEXT_PUBLIC_*` values are inli
 
 | Flag | Default | Effect |
 | --- | --- | --- |
-| `NEXT_PUBLIC_OFFLINE_TILES` | `off` | `on` serves the basemap from `public/offline` instead of the network |
-| `NEXT_PUBLIC_OCCLUSION_PROBE` | `on` | `off` hides the M4 probe line |
+| `NEXT_PUBLIC_OFFLINE_TILES` | `on` | `off` loads the basemap from the network instead of `public/offline`, for panning beyond the demo area |
+| `NEXT_PUBLIC_OCCLUSION_PROBE` | `on` | `off` hides the M4 probe line on `/lab` |
+| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8000` | Backend the studio calls |
 | `NEXT_PUBLIC_MAX_PIXEL_RATIO` | `2` | Drop to `1.5` if pitched views stutter on a high-DPI display |
-
-For demo day, follow the runbook in [`../docs/05-map-milestone-plan.md`](../docs/05-map-milestone-plan.md) §8.4 — the step that matters is turning Wi-Fi **off** and reloading.
 
 ## Community Board (multi-zone)
 
 `../scan/web` is a separate Next app with `basePath: "/community"`. This app rewrites `/community/*` to it (`SCAN_WEB_URL`, default `http://localhost:3001`) and `/scan-api/*` to the scan API (`SCAN_API_URL`, default `http://localhost:8001`), so the board, the phone page and both APIs share one origin — and one HTTPS tunnel for phones. Open the board at `http://localhost:3000/community/board`, not on port 3001.
 
-## Demo day
+## Demo notes
 
-Run four processes (each has a configuration in `../.claude/launch.json`):
-
-```bash
-cd backend && uv run --env-file .env uvicorn main:app --port 8000   # .env holds OPENAI_API_KEY (see backend/.env.example)
-cd scan/api && uv run uvicorn scan_api.main:app --port 8001
-cd scan/web && npm run dev      # :3001, reached through :3000/community
-cd web && npm run dev           # :3000
-```
-
-1. `cd backend && uv run uvicorn main:app --port 8000` — the studio shows a retry panel until it answers.
-2. In `web/`, set `NEXT_PUBLIC_OFFLINE_TILES=on` in `.env.local`, then `npm run build && npm start` (or `npm run dev`).
-3. Turn Wi-Fi off and reload `/studio` once to confirm the basemap still draws.
-4. In the results dashboard, `1`–`3` pick a site and `L` cycles Everyone → Heat-vulnerable → Wheelchair users. The reveal: open on Slauson (most residents), press `L` twice, then follow "Show Mary McLeod Bethune Swimming Pool".
+- Start all four services as described in the root [`README.md`](../README.md).
+- The basemap is served offline by default; turn Wi-Fi off and reload `/studio` once to confirm it still draws.
+- In the results dashboard, `1`–`3` pick a site and `L` cycles Everyone → Heat-vulnerable → Wheelchair users. The reveal: open on Slauson (most residents), press `L` twice, then follow "Show Mary McLeod Bethune Swimming Pool". With Bethune Pool selected, "Add shade and re-run" and Ask CivicSim follow.
 
 Every number in the studio comes from the backend. The street heat field is the backend's `heatmap` — each segment's modeled heat exposure over its travel time — smoothed for drawing.
 
@@ -69,7 +58,9 @@ src/components/scene/       R3F hero
 src/components/studio/      StudioScreen (panel flow) and StudioMap (heat-survey map)
 src/lib/studio-map.ts       paper restyle of the basemap, white slice, heat field from `heatmap`
 src/components/map/         MapView (ssr:false wrapper) -> CityMap (the map itself)
-src/components/panels/      map workbench panels
+src/components/start/       /start chooser
+src/components/panels/      map workbench panels and PlannerCard (Ask CivicSim)
+src/lib/cooling.ts, ai.ts   nearest-cooling and Ask CivicSim clients
 src/lib/api.ts, contract.ts FastAPI client and a mirror of docs/03-api-contract.md
 src/lib/useScenarios.ts     fetches, caches and selects backend scenarios
 src/lib/map*.ts, simulation.ts  basemap style, slice layers, deck.gl overlay
