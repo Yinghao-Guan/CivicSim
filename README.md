@@ -114,5 +114,3 @@ cd scan/web && npm run typecheck
 ## Data and credits
 
 Buildings, streets and facilities © OpenStreetMap contributors (ODbL); basemap tiles from OpenMapTiles / OpenFreeMap. Built with Next.js, React, Three.js, MapLibre GL, deck.gl, FastAPI and NetworkX, with OpenAI and Google Gemini for the AI features.
-
-This is an example
